@@ -1,40 +1,49 @@
 # CreditX
-<<<<<<< HEAD
 
-Local Flask + Firebase carbon credit platform.
+Carbon credit management platform built with Flask, Firebase Authentication, SQLite, and a single-page frontend.
 
-## What changed
+## Overview
 
-- Fixed the post-sign-in/profile flow so the app can reliably enter the main platform.
-- Fixed profile persistence so DigiLocker verification is not lost during save.
-- Switched Firebase setup to a Flask-served runtime config using local environment variables.
-- Added local session restore, better page navigation, and safer startup steps for macOS.
+CreditX helps a user:
 
-## Quick start
+- sign in with Google or mobile OTP
+- complete a company profile and upload verification documents
+- calculate emissions and estimated carbon credits
+- view a marketplace, blockchain-style ledger, portfolio, and reports
+
+## Tech Stack
+
+- Frontend: HTML, CSS, JavaScript
+- Backend: Flask
+- Auth: Firebase Authentication
+- Database: SQLite
+- Local file storage: encrypted document storage on disk
+
+## Key Features
+
+- Google sign-in with Firebase
+- OTP sign-in flow for local testing
+- multi-step company onboarding
+- encrypted-at-rest profile fields and uploaded documents
+- emissions calculator and report generator
+- marketplace, portfolio, and ledger views
+
+## Local Setup
+
+1. Clone or open the project folder.
+2. Create your Firebase env file from the example.
+3. Add your Firebase web app values.
+4. Start the Flask app.
 
 ```bash
 cd /Users/deepalisingh/Downloads/creditx_project_fixed
 cp firebase.local.env.example firebase.local.env
-```
-
-Edit `firebase.local.env` with your Firebase Web App config, then run:
-
-```bash
 bash start.sh
 ```
 
-Open [http://localhost:8080](http://localhost:8080).
+Open: [http://localhost:8080](http://localhost:8080)
 
-## Firebase setup
-
-In Firebase Console:
-
-1. Create or open your project.
-2. Enable `Authentication -> Sign-in method -> Google`.
-3. Add a Web App and copy its config values into `firebase.local.env`.
-4. Make sure `localhost` is allowed in authorized domains.
-
-## Manual run
+## Manual Run
 
 ```bash
 cd /Users/deepalisingh/Downloads/creditx_project_fixed
@@ -47,23 +56,39 @@ set +a
 python3 app.py
 ```
 
-## GitHub push
+## Firebase Setup
 
-```bash
-cd /Users/deepalisingh/Downloads/creditx_project_fixed
-git init
-git add .
-git commit -m "Fix CreditX local Firebase + Flask workflow"
-git branch -M main
-git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPO.git
-git push -u origin main
-```
+In Firebase Console:
 
-## Notes
+1. Create a project.
+2. Add a Web App.
+3. Copy the Firebase config into `firebase.local.env`.
+4. Enable `Authentication -> Sign-in method -> Google`.
+5. Add `localhost` and `127.0.0.1` to authorized domains if needed.
 
-- The OTP flow works locally through Flask and returns a demo OTP for testing.
-- Firebase config is optional for OTP login, but required for Google sign-in.
-- See `/Users/deepalisingh/Downloads/creditx_project_fixed/teaminfinique` for the exact command list.
-=======
-Modern AI powered Carbon Credit Management System 
->>>>>>> 6b1cddfc6ac2dcb5d285bcb6d47235a96d5e0bbc
+## Security Notes
+
+- `firebase.local.env` is excluded from Git.
+- uploaded documents are stored encrypted on disk
+- sensitive profile fields are stored encrypted in SQLite
+- encryption key is stored locally in `secrets/fernet.key` and excluded from Git
+
+This is strong server-side encryption at rest, not full end-to-end encryption.
+
+## Repository Hygiene
+
+Ignored from version control:
+
+- `.venv/`
+- `firebase.local.env`
+- `creditx.db`
+- `uploads/`
+- `secrets/`
+
+## Helpful Files
+
+- [app.py](/Users/deepalisingh/Downloads/creditx_project_fixed/app.py)
+- [static/index.html](/Users/deepalisingh/Downloads/creditx_project_fixed/static/index.html)
+- [start.sh](/Users/deepalisingh/Downloads/creditx_project_fixed/start.sh)
+- [firebase.local.env.example](/Users/deepalisingh/Downloads/creditx_project_fixed/firebase.local.env.example)
+- [teaminfinique](/Users/deepalisingh/Downloads/creditx_project_fixed/teaminfinique)
