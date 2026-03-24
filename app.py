@@ -3,18 +3,84 @@ CreditX Backend — Flask API
 Run: python3 app.py  →  http://localhost:8080
 """
 from flask import Flask, request, jsonify, send_from_directory, session
-import sqlite3, random, os, datetime, json, re
+import sqlite3, random, os, datetime, json, re, base64
+from cryptography.fernet import Fernet, InvalidToken
 from werkzeug.utils import secure_filename
 
 BASE_DIR   = os.path.dirname(os.path.abspath(__file__))
 UPLOAD_DIR = os.path.join(BASE_DIR, 'uploads')
+SECRETS_DIR = os.path.join(BASE_DIR, 'secrets')
+KEY_FILE = os.path.join(SECRETS_DIR, 'fernet.key')
 os.makedirs(UPLOAD_DIR, exist_ok=True)
+os.makedirs(SECRETS_DIR, exist_ok=True)
 
 ALLOWED_EXTENSIONS = {'pdf', 'jpg', 'jpeg', 'png'}
 
 def get_env(name, default=''):
     value = os.environ.get(name, default)
     return value.strip() if isinstance(value, str) else value
+
+
+def load_cipher():
+    env_key = get_env('CREDITX_ENCRYPTION_KEY')
+    if env_key:
+        key = env_key.encode('utf-8')
+    elif os.path.exists(KEY_FILE):
+        with open(KEY_FILE, 'rb') as fh:
+            key = fh.read().strip()
+    else:
+        key = Fernet.generate_key()
+        with open(KEY_FILE, 'wb') as fh:
+            fh.write(key)
+    return Fernet(key)
+
+
+CIPHER = load_cipher()
+ENCRYPTED_PREFIX = 'enc::'
+
+
+def encrypt_text(value):
+    if value in [None, '']:
+        return ''
+    if isinstance(value, bytes):
+        value = value.decode('utf-8')
+    if isinstance(value, str) and value.startswith(ENCRYPTED_PREFIX):
+        return value
+    token = CIPHER.encrypt(str(value).encode('utf-8')).decode('utf-8')
+    return ENCRYPTED_PREFIX + token
+
+
+def decrypt_text(value):
+    if value in [None, '']:
+        return ''
+    if not isinstance(value, str) or not value.startswith(ENCRYPTED_PREFIX):
+        return value
+    token = value[len(ENCRYPTED_PREFIX):]
+    try:
+        return CIPHER.decrypt(token.encode('utf-8')).decode('utf-8')
+    except InvalidToken:
+        return value
+
+
+def encrypt_bytes(raw_bytes):
+    return CIPHER.encrypt(raw_bytes)
+
+
+def decrypt_row(row, encrypted_fields):
+    if not row:
+        return None
+    data = dict(row)
+    for field in encrypted_fields:
+        if field in data:
+            data[field] = decrypt_text(data[field])
+    return data
+
+
+USER_ENCRYPTED_FIELDS = ['email', 'display_name', 'photo_url', 'phone']
+PROFILE_ENCRYPTED_FIELDS = [
+    'company_name', 'gstin', 'sector', 'address', 'owner_name',
+    'mobile', 'bee_cert', 'energy_manager', 'gst_doc', 'pan_doc', 'reg_doc'
+]
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -192,9 +258,9 @@ def auth_session():
     return jsonify({
         'success': True,
         'authenticated': True,
-        'user': dict(user_row),
+        'user': decrypt_row(user_row, USER_ENCRYPTED_FIELDS),
         'has_profile': profile_row is not None,
-        'profile': dict(profile_row) if profile_row else None
+        'profile': decrypt_row(profile_row, PROFILE_ENCRYPTED_FIELDS) if profile_row else None
     })
 
 # ══════════════════════════════════
@@ -209,16 +275,27 @@ def auth_google():
     name = d.get('displayName',''); photo = d.get('photoURL','')
     if not uid: return jsonify({'success':False,'error':'uid required'}), 400
     conn = get_db(); c = conn.cursor()
-    c.execute("INSERT OR IGNORE INTO users (uid,email,display_name,photo_url,auth_provider) VALUES (?,?,?,?,'google')",(uid,email,name,photo))
-    c.execute("UPDATE users SET email=?,display_name=?,photo_url=? WHERE uid=?",(email,name,photo,uid))
+    c.execute(
+        "INSERT OR IGNORE INTO users (uid,email,display_name,photo_url,auth_provider) VALUES (?,?,?,?,'google')",
+        (uid, encrypt_text(email), encrypt_text(name), encrypt_text(photo))
+    )
+    c.execute(
+        "UPDATE users SET email=?,display_name=?,photo_url=? WHERE uid=?",
+        (encrypt_text(email), encrypt_text(name), encrypt_text(photo), uid)
+    )
     c.execute("SELECT * FROM users WHERE uid=?", (uid,))
-    user = dict(c.fetchone()); conn.commit(); conn.close()
+    user = decrypt_row(c.fetchone(), USER_ENCRYPTED_FIELDS); conn.commit(); conn.close()
     session['uid'] = uid
     conn2 = get_db(); c2 = conn2.cursor()
     c2.execute("SELECT * FROM company_profiles WHERE user_uid=?",(uid,))
     prof = c2.fetchone()
     conn2.close()
-    return jsonify({'success':True,'user':user,'has_profile': prof is not None,'profile':dict(prof) if prof else None})
+    return jsonify({
+        'success':True,
+        'user':user,
+        'has_profile': prof is not None,
+        'profile': decrypt_row(prof, PROFILE_ENCRYPTED_FIELDS) if prof else None
+    })
 
 @app.route('/api/auth/send-otp', methods=['POST'])
 def send_otp():
@@ -254,8 +331,9 @@ def verify_otp():
         conn.close(); return jsonify({'success':False,'error':'OTP expired'}), 400
     c.execute("UPDATE otp_store SET used=1 WHERE id=?",(row['id'],))
     uid = 'phone_'+phone.replace('+','').replace(' ','')
-    c.execute("INSERT OR IGNORE INTO users (uid,phone,auth_provider) VALUES (?,?,'otp')",(uid,phone))
-    c.execute("SELECT * FROM users WHERE uid=?",(uid,)); user = dict(c.fetchone())
+    c.execute("INSERT OR IGNORE INTO users (uid,phone,auth_provider) VALUES (?,?,'otp')",(uid,encrypt_text(phone)))
+    c.execute("UPDATE users SET phone=? WHERE uid=?",(encrypt_text(phone), uid))
+    c.execute("SELECT * FROM users WHERE uid=?",(uid,)); user = decrypt_row(c.fetchone(), USER_ENCRYPTED_FIELDS)
     session['uid'] = uid
     conn.commit(); conn.close()
     return jsonify({'success':True,'user':user})
@@ -275,17 +353,18 @@ def save_profile():
     for field in ['gst_doc', 'pan_doc', 'reg_doc']:
         f = request.files.get(field)
         if f and allowed_file(f.filename):
-            filename = secure_filename(f"{uid}_{field}_{f.filename}")
-            f.save(os.path.join(UPLOAD_DIR, filename))
+            filename = secure_filename(f"{uid}_{field}_{f.filename}") + '.enc'
+            with open(os.path.join(UPLOAD_DIR, filename), 'wb') as fh:
+                fh.write(encrypt_bytes(f.read()))
             saved_files[field] = filename
 
     digilocker_verified = 1 if str(d.get('digilocker_verified', '')).lower() in ['1', 'true', 'yes'] else 0
     conn = get_db(); c = conn.cursor()
     c.execute("SELECT gst_doc, pan_doc, reg_doc, digilocker_verified FROM company_profiles WHERE user_uid=?", (uid,))
     existing = c.fetchone()
-    gst_doc = saved_files.get('gst_doc') or (existing['gst_doc'] if existing else '')
-    pan_doc = saved_files.get('pan_doc') or (existing['pan_doc'] if existing else '')
-    reg_doc = saved_files.get('reg_doc') or (existing['reg_doc'] if existing else '')
+    gst_doc = saved_files.get('gst_doc') or (decrypt_text(existing['gst_doc']) if existing else '')
+    pan_doc = saved_files.get('pan_doc') or (decrypt_text(existing['pan_doc']) if existing else '')
+    reg_doc = saved_files.get('reg_doc') or (decrypt_text(existing['reg_doc']) if existing else '')
     if existing and existing['digilocker_verified']:
         digilocker_verified = 1
 
@@ -311,10 +390,10 @@ def save_profile():
                 WHEN excluded.digilocker_verified=1 THEN 'verified'
                 ELSE company_profiles.profile_status
             END''',
-        (uid, d.get('company_name',''), d.get('gstin',''), d.get('sector',''),
-         d.get('address',''), d.get('owner_name',''), d.get('mobile',''),
-         d.get('bee_cert',''), d.get('energy_manager',''),
-         gst_doc, pan_doc, reg_doc, digilocker_verified, profile_status))
+        (uid, encrypt_text(d.get('company_name','')), encrypt_text(d.get('gstin','')), encrypt_text(d.get('sector','')),
+         encrypt_text(d.get('address','')), encrypt_text(d.get('owner_name','')), encrypt_text(d.get('mobile','')),
+         encrypt_text(d.get('bee_cert','')), encrypt_text(d.get('energy_manager','')),
+         encrypt_text(gst_doc), encrypt_text(pan_doc), encrypt_text(reg_doc), digilocker_verified, profile_status))
     c.execute("UPDATE users SET profile_complete=1 WHERE uid=?",(uid,))
     conn.commit(); conn.close()
     docs_saved = [k for k in saved_files]
@@ -335,12 +414,13 @@ def upload_doc():
     f = request.files.get('file')
     if not f or not allowed_file(f.filename):
         return jsonify({'success':False,'error':'No valid file provided (pdf/jpg/png only)'}), 400
-    filename = secure_filename(f"{uid}_{doc_type}_{f.filename}")
-    f.save(os.path.join(UPLOAD_DIR, filename))
+    filename = secure_filename(f"{uid}_{doc_type}_{f.filename}") + '.enc'
+    with open(os.path.join(UPLOAD_DIR, filename), 'wb') as fh:
+        fh.write(encrypt_bytes(f.read()))
     conn = get_db(); c = conn.cursor()
-    c.execute(f"UPDATE company_profiles SET {doc_type}=? WHERE user_uid=?", (filename, uid))
+    c.execute(f"UPDATE company_profiles SET {doc_type}=? WHERE user_uid=?", (encrypt_text(filename), uid))
     if c.rowcount == 0:
-        c.execute(f"INSERT OR IGNORE INTO company_profiles (user_uid,{doc_type}) VALUES (?,?)", (uid, filename))
+        c.execute(f"INSERT OR IGNORE INTO company_profiles (user_uid,{doc_type}) VALUES (?,?)", (uid, encrypt_text(filename)))
     conn.commit(); conn.close()
     return jsonify({'success':True,'filename':filename,'doc_type':doc_type})
 
@@ -349,7 +429,7 @@ def get_profile(uid):
     conn = get_db(); c = conn.cursor()
     c.execute("SELECT * FROM company_profiles WHERE user_uid=?",(uid,))
     row = c.fetchone(); conn.close()
-    if row: return jsonify({'found':True,'profile':dict(row)})
+    if row: return jsonify({'found':True,'profile':decrypt_row(row, PROFILE_ENCRYPTED_FIELDS)})
     return jsonify({'found':False})
 
 @app.route('/api/profile/digilocker-verify', methods=['POST'])
@@ -363,7 +443,10 @@ def digilocker_verify():
     conn = get_db(); c = conn.cursor()
     c.execute("UPDATE company_profiles SET digilocker_verified=1, profile_status='verified' WHERE user_uid=?",(uid,))
     if c.rowcount == 0:
-        c.execute("INSERT INTO company_profiles (user_uid, gstin, digilocker_verified, profile_status) VALUES (?, ?, 1, 'verified')", (uid, gstin))
+        c.execute(
+            "INSERT INTO company_profiles (user_uid, gstin, digilocker_verified, profile_status) VALUES (?, ?, 1, 'verified')",
+            (uid, encrypt_text(gstin))
+        )
     conn.commit(); conn.close()
     return jsonify({'success':True,'message':'DigiLocker verification successful','status':'verified'})
 

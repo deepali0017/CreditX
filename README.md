@@ -1,4 +1,5 @@
 # CreditX
+<<<<<<< HEAD
 
 Local Flask + Firebase carbon credit platform.
 
@@ -63,3 +64,6 @@ git push -u origin main
 - The OTP flow works locally through Flask and returns a demo OTP for testing.
 - Firebase config is optional for OTP login, but required for Google sign-in.
 - See `/Users/deepalisingh/Downloads/creditx_project_fixed/teaminfinique` for the exact command list.
+=======
+Modern AI powered Carbon Credit Management System 
+>>>>>>> 6b1cddfc6ac2dcb5d285bcb6d47235a96d5e0bbc

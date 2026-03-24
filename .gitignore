@@ -4,4 +4,6 @@ __pycache__/
 creditx.db
 uploads/
 firebase.local.env
+secrets/
+.DS_Store
 .DS_Store
