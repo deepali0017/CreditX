@@ -4,12 +4,39 @@ Carbon credit management platform built with Flask, Firebase Authentication, SQL
 
 ## Overview
 
-CreditX helps a user:
+CreditX helps a business user:
 
 - sign in with Google or mobile OTP
 - complete a company profile and upload verification documents
 - calculate emissions and estimated carbon credits
-- view a marketplace, blockchain-style ledger, portfolio, and reports
+- review marketplace, portfolio, blockchain-style ledger, and reports
+
+## Demo Flow
+
+1. Sign in with Google or OTP.
+2. Complete company onboarding.
+3. Upload or verify documents.
+4. Calculate emissions and view credits.
+5. Explore marketplace, reports, and dashboard pages.
+
+## Features
+
+- Google sign-in with Firebase Authentication
+- OTP sign-in flow for local testing
+- multi-step onboarding and profile verification
+- encrypted-at-rest profile fields and uploaded documents
+- emissions calculator and report generator
+- marketplace, portfolio, and blockchain-style ledger views
+
+## Screenshots
+
+Add screenshots to a `docs/` folder and reference them here.
+
+```md
+![Sign in](docs/signin.png)
+![Dashboard](docs/dashboard.png)
+![Marketplace](docs/marketplace.png)
+```
 
 ## Tech Stack
 
@@ -17,23 +44,9 @@ CreditX helps a user:
 - Backend: Flask
 - Auth: Firebase Authentication
 - Database: SQLite
-- Local file storage: encrypted document storage on disk
+- File security: encrypted local document storage
 
-## Key Features
-
-- Google sign-in with Firebase
-- OTP sign-in flow for local testing
-- multi-step company onboarding
-- encrypted-at-rest profile fields and uploaded documents
-- emissions calculator and report generator
-- marketplace, portfolio, and ledger views
-
-## Local Setup
-
-1. Clone or open the project folder.
-2. Create your Firebase env file from the example.
-3. Add your Firebase web app values.
-4. Start the Flask app.
+## Quick Start
 
 ```bash
 cd /Users/deepalisingh/Downloads/creditx_project_fixed
@@ -58,19 +71,17 @@ python3 app.py
 
 ## Firebase Setup
 
-In Firebase Console:
-
-1. Create a project.
+1. Create or open a Firebase project.
 2. Add a Web App.
-3. Copy the Firebase config into `firebase.local.env`.
+3. Copy Firebase web config into `firebase.local.env`.
 4. Enable `Authentication -> Sign-in method -> Google`.
-5. Add `localhost` and `127.0.0.1` to authorized domains if needed.
+5. Add `localhost` and `127.0.0.1` to authorized domains when needed.
 
 ## Security Notes
 
-- `firebase.local.env` is excluded from Git.
-- uploaded documents are stored encrypted on disk
-- sensitive profile fields are stored encrypted in SQLite
+- `firebase.local.env` is excluded from Git
+- uploaded documents are encrypted before being stored on disk
+- sensitive profile fields are encrypted before being stored in SQLite
 - encryption key is stored locally in `secrets/fernet.key` and excluded from Git
 
 This is strong server-side encryption at rest, not full end-to-end encryption.
@@ -85,10 +96,14 @@ Ignored from version control:
 - `uploads/`
 - `secrets/`
 
-## Helpful Files
+## Project Files
 
-- [app.py](/Users/deepalisingh/Downloads/creditx_project_fixed/app.py)
-- [static/index.html](/Users/deepalisingh/Downloads/creditx_project_fixed/static/index.html)
-- [start.sh](/Users/deepalisingh/Downloads/creditx_project_fixed/start.sh)
-- [firebase.local.env.example](/Users/deepalisingh/Downloads/creditx_project_fixed/firebase.local.env.example)
-- [teaminfinique](/Users/deepalisingh/Downloads/creditx_project_fixed/teaminfinique)
+- `app.py` - Flask backend and API routes
+- `static/index.html` - frontend UI and logic
+- `start.sh` - local startup script
+- `firebase.local.env.example` - Firebase env template
+- `teaminfinique` - quick local setup guide
+
+## License
+
+This project is licensed under the MIT License.
