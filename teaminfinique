@@ -1,0 +1,44 @@
+TEAM INFINIQUE LOCAL RUN GUIDE
+
+1. Open Terminal and go to the project:
+cd /Users/deepalisingh/Downloads/creditx_project_fixed
+
+2. Create your Firebase config file:
+cp firebase.local.env.example firebase.local.env
+
+3. Edit firebase.local.env and paste your Firebase Web App values from Firebase Console.
+
+4. Start the project:
+bash start.sh
+
+5. Open this URL if the browser does not open automatically:
+http://localhost:8080
+
+Manual setup:
+
+cd /Users/deepalisingh/Downloads/creditx_project_fixed
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+set -a
+source firebase.local.env
+set +a
+python3 app.py
+
+GitHub push:
+
+cd /Users/deepalisingh/Downloads/creditx_project_fixed
+git init
+git add .
+git commit -m "Fix CreditX frontend and backend local Firebase flow"
+git branch -M main
+git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPO.git
+git push -u origin main
+
+Firebase notes:
+- Enable Google sign-in in Firebase Authentication.
+- Add http://localhost:8080 to Authorized domains.
+- Create a Web App in Firebase and copy its config into firebase.local.env.
+
+Fallback login:
+- Mobile OTP still works locally through the Flask backend demo OTP flow.

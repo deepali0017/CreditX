@@ -1,0 +1,7 @@
+.venv/
+__pycache__/
+*.pyc
+creditx.db
+uploads/
+firebase.local.env
+.DS_Store

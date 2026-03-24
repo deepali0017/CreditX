@@ -1,0 +1,1691 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CreditX – Carbon Intelligence Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800&family=Nunito:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+<!-- Firebase v9 compat (CDN — no npm needed) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+
+<style>
+:root{
+  --ivory:#f8f5ef;--cream:#f0ebe0;--parchment:#e8e0cc;
+  --forest:#2d6a4f;--forest2:#40916c;--forest3:#52b788;
+  --leaf:#74c69d;--mint:#b7e4c7;--sage:#d8f3dc;
+  --slate:#1b4965;--slate2:#2e6f95;
+  --gold:#b5830a;--gold2:#d4a017;--amber:#f4a261;
+  --charcoal:#2d3a2e;--text:#1e2d1f;--muted:#6b7e6c;
+  --border:#c8d8c9;--red:#c1440e;--radius:16px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--ivory);color:var(--text);font-family:'Nunito',sans-serif;min-height:100vh;}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:radial-gradient(circle at 10% 20%,rgba(45,106,79,.05) 0%,transparent 50%),
+  radial-gradient(circle at 90% 80%,rgba(27,73,101,.05) 0%,transparent 50%),
+  radial-gradient(circle at 50% 50%,rgba(116,198,157,.03) 0%,transparent 70%);}
+
+/* ═══ AUTH OVERLAY ═══ */
+#auth-screen{
+  position:fixed;inset:0;z-index:1000;
+  background:linear-gradient(135deg,#1b3a2a 0%,#2d6a4f 50%,#1b4965 100%);
+  display:flex;align-items:center;justify-content:center;
+  animation:fadeIn .4s ease;
+}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.auth-card{
+  background:#fff;border-radius:24px;padding:0;width:100%;max-width:460px;
+  box-shadow:0 32px 80px rgba(0,0,0,.25);overflow:hidden;position:relative;
+}
+.auth-header{
+  background:linear-gradient(135deg,var(--forest) 0%,var(--forest2) 100%);
+  padding:36px 40px 28px;text-align:center;position:relative;overflow:hidden;
+}
+.auth-header::before{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(circle at 30% 50%,rgba(255,255,255,.08) 0%,transparent 60%),
+             radial-gradient(circle at 80% 20%,rgba(255,255,255,.05) 0%,transparent 40%);
+}
+.auth-logo-row{display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:6px;position:relative;}
+.auth-logo-icon{font-size:2.4rem;filter:drop-shadow(0 2px 8px rgba(0,0,0,.2));}
+.auth-logo-text{font-family:'Playfair Display',serif;color:#fff;font-size:2rem;font-weight:700;letter-spacing:-.02em;}
+.auth-tagline{font-size:.78rem;color:rgba(255,255,255,.65);letter-spacing:.12em;text-transform:uppercase;position:relative;}
+.auth-steps{display:flex;justify-content:center;gap:6px;margin-top:20px;position:relative;}
+.auth-step-dot{
+  width:8px;height:8px;border-radius:50%;
+  background:rgba(255,255,255,.3);transition:all .3s;
+}
+.auth-step-dot.active{background:#fff;width:24px;border-radius:4px;}
+
+.auth-body{padding:32px 40px 36px;}
+.auth-section{display:none;}
+.auth-section.active{display:block;animation:fadeUp .35s ease;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+
+.auth-title{font-family:'Playfair Display',serif;font-size:1.3rem;color:var(--charcoal);font-weight:700;margin-bottom:4px;}
+.auth-sub{font-size:.83rem;color:var(--muted);margin-bottom:22px;line-height:1.5;}
+
+.auth-divider{display:flex;align-items:center;gap:12px;margin:18px 0;}
+.auth-divider::before,.auth-divider::after{content:'';flex:1;height:1px;background:var(--border);}
+.auth-divider span{font-size:.75rem;color:var(--muted);font-weight:600;}
+
+/* Google button */
+.btn-google{
+  width:100%;padding:13px 20px;border-radius:12px;border:1.5px solid var(--border);
+  background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;
+  font-family:'Nunito',sans-serif;font-size:.92rem;font-weight:700;color:var(--charcoal);
+  transition:all .2s;box-shadow:0 2px 8px rgba(0,0,0,.06);
+}
+.btn-google:hover{border-color:var(--forest2);box-shadow:0 4px 16px rgba(45,106,79,.15);transform:translateY(-1px);}
+.btn-google svg{width:20px;height:20px;flex-shrink:0;}
+
+/* OTP section */
+.otp-input-row{display:flex;gap:8px;}
+.otp-input-row input[type=text]{flex:1;letter-spacing:.15em;font-size:1.1rem;text-align:center;}
+.otp-boxes{display:flex;gap:10px;justify-content:center;margin:12px 0;}
+.otp-box{width:44px;height:52px;border:1.5px solid var(--border);border-radius:10px;text-align:center;
+  font-size:1.3rem;font-weight:700;font-family:'Nunito',sans-serif;color:var(--forest);
+  background:var(--ivory);transition:border-color .2s;}
+.otp-box:focus{outline:none;border-color:var(--forest2);box-shadow:0 0 0 3px rgba(64,145,108,.12);}
+
+/* Profile form steps */
+.profile-step{display:none;}
+.profile-step.active{display:block;animation:fadeUp .3s ease;}
+.step-indicator{display:flex;gap:0;margin-bottom:24px;}
+.step-pill{
+  flex:1;padding:8px 4px;text-align:center;font-size:.7rem;font-weight:700;
+  border-bottom:3px solid var(--border);color:var(--muted);transition:all .2s;cursor:default;
+}
+.step-pill.done{border-color:var(--forest2);color:var(--forest2);}
+.step-pill.current{border-color:var(--forest);color:var(--forest);}
+
+.upload-zone{
+  border:2px dashed var(--border);border-radius:12px;padding:20px;text-align:center;
+  cursor:pointer;transition:all .2s;background:var(--ivory);
+}
+.upload-zone:hover{border-color:var(--forest2);background:var(--sage);}
+.upload-zone.uploaded{border-color:var(--forest2);border-style:solid;background:var(--sage);}
+.upload-zone input{display:none;}
+
+.digilocker-btn{
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  width:100%;padding:13px;border-radius:12px;border:1.5px solid #1565c0;
+  background:linear-gradient(135deg,#1565c0,#1976d2);color:#fff;
+  cursor:pointer;font-family:'Nunito',sans-serif;font-size:.9rem;font-weight:700;
+  transition:all .2s;
+}
+.digilocker-btn:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(21,101,192,.3);}
+
+.verified-badge{
+  display:inline-flex;align-items:center;gap:6px;
+  background:var(--sage);border:1px solid var(--mint);
+  border-radius:20px;padding:5px 12px;font-size:.78rem;color:var(--forest);font-weight:700;
+}
+
+/* ═══ SIDEBAR ═══ */
+.sidebar{position:fixed;left:0;top:0;bottom:0;width:240px;background:var(--forest);display:flex;flex-direction:column;z-index:100;box-shadow:4px 0 24px rgba(0,0,0,.12);}
+.sidebar-logo{padding:28px 20px 20px;border-bottom:1px solid rgba(255,255,255,.1);}
+.logo-badge{display:flex;align-items:center;gap:10px;margin-bottom:4px;}
+.logo-icon{font-size:2rem;}
+.logo-text{font-family:'Playfair Display',serif;color:#fff;font-size:1.5rem;font-weight:700;}
+.logo-sub{font-size:.72rem;color:rgba(255,255,255,.55);letter-spacing:.1em;text-transform:uppercase;}
+
+/* Verified user pill in sidebar */
+.sidebar-user{
+  display:flex;align-items:center;gap:8px;margin-top:10px;
+  background:rgba(255,255,255,.1);border-radius:10px;padding:8px 10px;
+}
+.user-avatar{width:30px;height:30px;border-radius:50%;object-fit:cover;background:var(--mint);display:flex;align-items:center;justify-content:center;font-size:.85rem;flex-shrink:0;}
+.user-info{flex:1;min-width:0;}
+.user-name{font-size:.78rem;color:#fff;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.user-status{font-size:.65rem;color:rgba(255,255,255,.5);}
+.user-logout{font-size:.7rem;color:rgba(255,255,255,.4);cursor:pointer;padding:2px 6px;border-radius:6px;transition:all .2s;}
+.user-logout:hover{background:rgba(255,255,255,.15);color:#fff;}
+
+.sidebar-nav{flex:1;padding:16px 12px;overflow-y:auto;}
+.nav-section{font-size:.65rem;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.4);padding:14px 8px 6px;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;cursor:pointer;color:rgba(255,255,255,.75);font-size:.88rem;font-weight:500;transition:all .2s;margin-bottom:2px;}
+.nav-item:hover{background:rgba(255,255,255,.1);color:#fff;}
+.nav-item.active{background:rgba(255,255,255,.18);color:#fff;font-weight:600;}
+.nav-item .nav-icon{width:20px;text-align:center;font-size:1rem;}
+.nav-badge{margin-left:auto;background:var(--gold2);color:#fff;font-size:.65rem;padding:2px 7px;border-radius:10px;font-weight:700;}
+.sidebar-footer{padding:16px 20px;border-top:1px solid rgba(255,255,255,.1);font-size:.72rem;color:rgba(255,255,255,.35);}
+
+/* ═══ MAIN ═══ */
+.main{margin-left:240px;position:relative;z-index:1;min-height:100vh;}
+.topbar{background:rgba(248,245,239,.95);backdrop-filter:blur(10px);border-bottom:1px solid var(--border);padding:16px 32px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;}
+.topbar-title{font-family:'Playfair Display',serif;font-size:1.3rem;color:var(--forest);font-weight:700;}
+.topbar-right{display:flex;align-items:center;gap:12px;}
+.company-badge{background:var(--sage);border:1px solid var(--border);padding:6px 14px;border-radius:20px;font-size:.8rem;color:var(--forest);font-weight:600;}
+.score-pill{background:var(--forest);color:#fff;padding:6px 16px;border-radius:20px;font-size:.8rem;font-weight:700;}
+
+.content{padding:32px;}
+.page{display:none;animation:fadeUp .4s ease both;}
+.page.active{display:block;}
+
+/* ═══ TYPOGRAPHY ═══ */
+.page-header{margin-bottom:28px;}
+.page-header h2{font-family:'Playfair Display',serif;font-size:2rem;color:var(--charcoal);font-weight:700;}
+.page-header p{color:var(--muted);font-size:.9rem;margin-top:6px;}
+.section-label{font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:var(--forest2);font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+.section-label::after{content:'';flex:1;height:1px;background:var(--border);}
+
+/* ═══ CARDS ═══ */
+.card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:20px;box-shadow:0 2px 12px rgba(45,106,79,.06);transition:box-shadow .3s,border-color .3s;}
+.card:hover{box-shadow:0 4px 20px rgba(45,106,79,.1);border-color:var(--leaf);}
+.card-green{background:var(--sage);border-color:var(--mint);}
+.card-slate{background:#f0f6fa;border-color:#b8d4e3;}
+.card-gold{background:#fffaed;border-color:#e8d5a3;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;}
+@media(max-width:900px){.grid2,.grid3,.grid4{grid-template-columns:1fr;}}
+.stat-card{background:#fff;border:1px solid var(--border);border-radius:14px;padding:20px;text-align:center;box-shadow:0 2px 8px rgba(45,106,79,.06);}
+.stat-icon{font-size:2rem;margin-bottom:8px;}
+.stat-value{font-family:'Playfair Display',serif;font-size:1.9rem;font-weight:700;margin-bottom:4px;}
+.stat-label{font-size:.78rem;color:var(--muted);font-weight:500;}
+.green{color:var(--forest2);}.gold{color:var(--gold);}.slate{color:var(--slate);}.red{color:var(--red);}
+
+/* ═══ BUTTONS ═══ */
+.btn{padding:10px 22px;border-radius:10px;border:none;cursor:pointer;font-family:'Nunito',sans-serif;font-size:.9rem;font-weight:700;transition:all .18s;display:inline-flex;align-items:center;gap:8px;}
+.btn-primary{background:var(--forest);color:#fff;box-shadow:0 3px 12px rgba(45,106,79,.25);}
+.btn-primary:hover{background:var(--forest2);transform:translateY(-1px);}
+.btn-secondary{background:var(--sage);color:var(--forest);border:1px solid var(--mint);}
+.btn-secondary:hover{background:var(--mint);}
+.btn-gold{background:var(--gold2);color:#fff;}
+.btn-gold:hover{background:var(--gold);}
+.btn-slate{background:var(--slate);color:#fff;}
+.btn-danger{background:#fef2f0;color:var(--red);border:1px solid #f5c6bb;}
+.btn-lg{padding:14px 28px;font-size:1rem;border-radius:12px;}
+.btn-full{width:100%;justify-content:center;}
+.btn:disabled{opacity:.55;cursor:not-allowed;transform:none!important;}
+
+/* ═══ INPUTS ═══ */
+.form-group{margin-bottom:18px;}
+.form-group label{display:flex;align-items:center;gap:6px;font-size:.85rem;color:var(--muted);font-weight:600;margin-bottom:6px;}
+.form-control{width:100%;background:var(--ivory);border:1.5px solid var(--border);border-radius:10px;padding:11px 14px;color:var(--text);font-size:.95rem;font-family:'Nunito',sans-serif;transition:border-color .2s,box-shadow .2s;-moz-appearance:textfield;}
+.form-control::-webkit-inner-spin-button{-webkit-appearance:none;}
+.form-control:focus{outline:none;border-color:var(--forest2);box-shadow:0 0 0 3px rgba(64,145,108,.12);}
+.input-with-unit{position:relative;}
+.input-with-unit .unit{position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:.75rem;color:var(--muted);background:var(--parchment);padding:2px 8px;border-radius:6px;border:1px solid var(--border);}
+.slider{width:100%;-webkit-appearance:none;height:5px;border-radius:5px;background:var(--border);outline:none;cursor:pointer;margin-top:8px;}
+.slider::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--forest2);cursor:pointer;border:3px solid #fff;box-shadow:0 2px 8px rgba(64,145,108,.35);}
+select.form-control{cursor:pointer;}
+
+/* ═══ MISC ═══ */
+.progress-bg{height:10px;background:var(--parchment);border-radius:6px;overflow:hidden;}
+.progress-bar{height:100%;border-radius:6px;transition:width 1s cubic-bezier(.34,1.56,.64,1);}
+table{width:100%;border-collapse:collapse;font-size:.88rem;}
+th{background:var(--sage);color:var(--forest);font-weight:700;padding:12px 16px;text-align:left;border-bottom:2px solid var(--mint);font-size:.8rem;letter-spacing:.03em;}
+td{padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text);}
+tr:hover td{background:var(--sage);}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:.72rem;font-weight:700;}
+.badge-green{background:var(--sage);color:var(--forest);border:1px solid var(--mint);}
+.badge-gold{background:#fffaed;color:var(--gold);border:1px solid #e8d5a3;}
+.badge-slate{background:#eef5fa;color:var(--slate);border:1px solid #b8d4e3;}
+.badge-red{background:#fef2f0;color:var(--red);border:1px solid #f5c6bb;}
+.timeline{position:relative;padding-left:32px;}
+.timeline::before{content:'';position:absolute;left:10px;top:0;bottom:0;width:2px;background:var(--mint);}
+.timeline-item{position:relative;margin-bottom:24px;}
+.timeline-dot{position:absolute;left:-26px;top:4px;width:14px;height:14px;border-radius:50%;background:var(--forest2);border:3px solid #fff;box-shadow:0 0 0 2px var(--forest2);}
+.timeline-title{font-weight:700;color:var(--charcoal);font-size:.95rem;}
+.timeline-body{font-size:.85rem;color:var(--muted);margin-top:4px;line-height:1.6;}
+.timeline-date{font-size:.72rem;color:var(--forest2);font-weight:700;text-transform:uppercase;letter-spacing:.08em;}
+.gauge-wrap{display:flex;flex-direction:column;align-items:center;}
+.gauge-ring{width:160px;height:160px;border-radius:50%;display:flex;align-items:center;justify-content:center;transition:background 1.2s ease;box-shadow:0 4px 24px rgba(45,106,79,.15);}
+.gauge-inner{width:118px;height:118px;border-radius:50%;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.gauge-val{font-family:'Playfair Display',serif;font-size:2rem;font-weight:700;}
+.market-card{background:#fff;border:1px solid var(--border);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:10px;box-shadow:0 2px 8px rgba(45,106,79,.06);transition:transform .2s,box-shadow .2s;}
+.market-card:hover{transform:translateY(-3px);box-shadow:0 8px 24px rgba(45,106,79,.12);}
+.market-card-header{display:flex;align-items:center;gap:12px;}
+.company-avatar{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0;}
+.company-name{font-weight:700;font-size:.95rem;}
+.company-sector{font-size:.75rem;color:var(--muted);}
+.market-price{font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:700;color:var(--forest);}
+.market-price span{font-size:.75rem;font-family:'Nunito',sans-serif;color:var(--muted);font-weight:400;}
+.credit-chips{display:flex;gap:6px;flex-wrap:wrap;}
+.credit-chip{background:var(--sage);color:var(--forest);border:1px solid var(--mint);border-radius:6px;padding:3px 10px;font-size:.75rem;font-weight:600;}
+.report-preview{background:#fff;border:2px solid var(--slate);border-radius:8px;padding:40px;font-family:'Nunito',sans-serif;max-width:800px;margin:0 auto;}
+.report-header{text-align:center;border-bottom:3px double var(--slate);padding-bottom:20px;margin-bottom:24px;}
+.report-emblem{font-size:3rem;}
+.report-title{font-family:'Playfair Display',serif;font-size:1.4rem;color:var(--slate);font-weight:700;margin:8px 0 4px;}
+.report-subtitle{font-size:.85rem;color:var(--muted);}
+.report-section-title{font-weight:700;color:var(--slate);border-bottom:1px solid var(--border);padding-bottom:6px;margin:20px 0 12px;text-transform:uppercase;letter-spacing:.06em;font-size:.85rem;}
+.report-table{width:100%;border-collapse:collapse;font-size:.82rem;margin-bottom:14px;}
+.report-table th{background:#eef5fa;color:var(--slate);padding:8px 12px;text-align:left;border:1px solid #b8d4e3;}
+.report-table td{padding:8px 12px;border:1px solid var(--border);}
+.report-signature{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:32px;padding-top:20px;border-top:1px solid var(--border);}
+.sig-line{border-bottom:1px solid var(--charcoal);margin-bottom:6px;padding-bottom:20px;}
+.sig-label{font-size:.75rem;color:var(--muted);}
+.guideline-card{background:#fff;border-left:4px solid var(--forest2);border-radius:0 12px 12px 0;padding:16px 20px;margin-bottom:14px;box-shadow:0 2px 8px rgba(45,106,79,.05);}
+.guideline-card.warning{border-left-color:var(--gold2);}
+.guideline-card.info{border-left-color:var(--slate2);}
+.guideline-title{font-weight:700;font-size:.92rem;color:var(--charcoal);margin-bottom:4px;}
+.guideline-body{font-size:.83rem;color:var(--muted);line-height:1.6;}
+.guideline-meta{font-size:.72rem;color:var(--forest2);font-weight:600;margin-top:6px;}
+::-webkit-scrollbar{width:6px;}::-webkit-scrollbar-track{background:var(--cream);}::-webkit-scrollbar-thumb{background:var(--leaf);border-radius:3px;}
+.chip{background:var(--sage);border:1px solid var(--mint);border-radius:20px;padding:6px 14px;font-size:.8rem;color:var(--forest);cursor:pointer;font-weight:600;transition:all .2s;display:inline-block;margin:4px;}
+.chip:hover{background:var(--forest);color:#fff;}
+.tx-row{display:flex;align-items:center;gap:14px;padding:12px;background:var(--ivory);border:1px solid var(--border);border-radius:10px;margin-bottom:8px;font-size:.82rem;}
+.tx-hash{font-family:monospace;color:var(--slate2);font-size:.75rem;flex:1;}
+.tx-amount{font-weight:700;color:var(--forest2);}
+.alert{padding:14px 18px;border-radius:10px;font-size:.85rem;margin-bottom:16px;display:flex;gap:10px;align-items:flex-start;}
+.alert-green{background:var(--sage);border:1px solid var(--mint);color:var(--forest);}
+.alert-gold{background:#fffaed;border:1px solid #e8d5a3;color:var(--gold);}
+.alert-blue{background:#eef5fa;border:1px solid #b8d4e3;color:var(--slate);}
+.tabs{display:flex;gap:4px;background:var(--parchment);border-radius:12px;padding:4px;margin-bottom:20px;}
+.tab-btn{flex:1;padding:9px 12px;border-radius:9px;border:none;cursor:pointer;font-family:'Nunito',sans-serif;font-size:.82rem;font-weight:600;color:var(--muted);background:transparent;transition:all .2s;}
+.tab-btn.active{background:#fff;color:var(--forest);box-shadow:0 2px 8px rgba(45,106,79,.1);}
+.tab-content{display:none;}
+.tab-content.active{display:block;animation:fadeUp .3s ease;}
+#toast{position:fixed;bottom:30px;right:30px;background:var(--forest);color:#fff;padding:14px 22px;border-radius:12px;font-size:.88rem;font-weight:600;box-shadow:0 8px 24px rgba(45,106,79,.35);z-index:2001;opacity:0;transition:opacity .3s,transform .3s;transform:translateY(10px);}
+#toast.show{opacity:1;transform:translateY(0);}
+.auth-status{display:none;margin-top:14px;padding:10px 12px;border-radius:10px;font-size:.8rem;line-height:1.5;}
+.auth-status.show{display:block;}
+.auth-status.info{background:#eef5fa;border:1px solid #b8d4e3;color:var(--slate);}
+.auth-status.error{background:#fef2f0;border:1px solid #f5c6bb;color:var(--red);}
+.auth-status.success{background:var(--sage);border:1px solid var(--mint);color:var(--forest);}
+
+/* ═══ INSIGHTS / DASHBOARD page ═══ */
+.insights-tabs{display:flex;gap:4px;background:var(--parchment);border-radius:12px;padding:4px;margin-bottom:20px;}
+.ins-tab-btn{flex:1;padding:10px;border-radius:9px;border:none;cursor:pointer;font-family:'Nunito',sans-serif;font-size:.85rem;font-weight:600;color:var(--muted);background:transparent;transition:all .2s;}
+.ins-tab-btn.active{background:#fff;color:var(--forest);box-shadow:0 2px 8px rgba(45,106,79,.1);}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════
+     AUTH SCREEN  
+══════════════════════════════════ -->
+<div id="auth-screen">
+  <div class="auth-card">
+
+    <div class="auth-header">
+      <div class="auth-logo-row">
+        <span class="auth-logo-icon">🌿</span>
+        <span class="auth-logo-text">CreditX</span>
+      </div>
+      <div class="auth-tagline">Carbon Intelligence Platform · India</div>
+      <div class="auth-steps">
+        <div class="auth-step-dot active" id="step-dot-0"></div>
+        <div class="auth-step-dot" id="step-dot-1"></div>
+        <div class="auth-step-dot" id="step-dot-2"></div>
+      </div>
+    </div>
+
+    <div class="auth-body">
+
+      <!-- ── STEP 0: Sign In ── -->
+      <div class="auth-section active" id="auth-signin">
+        <div class="auth-title">Welcome back</div>
+        <div class="auth-sub">Sign in to access your carbon dashboard and credits</div>
+
+        <!-- Google sign-in -->
+        <button class="btn-google" id="google-signin-btn" onclick="signInWithGoogle()">
+          <svg viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+          Continue with Google
+        </button>
+        <div id="auth-status" class="auth-status"></div>
+
+        <div class="auth-divider"><span>or sign in with mobile OTP</span></div>
+
+        <div class="form-group">
+          <label>📱 Mobile Number</label>
+          <div style="display:flex;gap:8px;">
+            <input class="form-control" style="width:70px;text-align:center;" value="+91" readonly>
+            <input class="form-control" type="tel" id="otp-phone" placeholder="9876543210" maxlength="10" style="flex:1;">
+          </div>
+        </div>
+        <button class="btn btn-primary btn-full" onclick="sendOTP()">📲 Send OTP</button>
+
+        <div style="margin-top:16px;font-size:.75rem;color:var(--muted);text-align:center;line-height:1.6;">
+          By continuing, you agree to CreditX's Terms of Service.<br>
+          Your data is protected under India's DPDP Act 2023.
+        </div>
+      </div>
+
+      <!-- ── STEP 0b: Verify OTP ── -->
+      <div class="auth-section" id="auth-otp">
+        <div class="auth-title">Verify your number</div>
+        <div class="auth-sub" id="otp-sent-to">Enter the 6-digit OTP sent to your mobile</div>
+
+        <div class="otp-boxes">
+          <input class="otp-box" type="text" maxlength="1" id="otp0" oninput="otpInput(0)">
+          <input class="otp-box" type="text" maxlength="1" id="otp1" oninput="otpInput(1)">
+          <input class="otp-box" type="text" maxlength="1" id="otp2" oninput="otpInput(2)">
+          <input class="otp-box" type="text" maxlength="1" id="otp3" oninput="otpInput(3)">
+          <input class="otp-box" type="text" maxlength="1" id="otp4" oninput="otpInput(4)">
+          <input class="otp-box" type="text" maxlength="1" id="otp5" oninput="otpInput(5)">
+        </div>
+
+        <div id="demo-otp-hint" style="text-align:center;font-size:.78rem;color:var(--forest2);margin-bottom:14px;background:var(--sage);border-radius:8px;padding:8px;display:none;"></div>
+
+        <button class="btn btn-primary btn-full" onclick="verifyOTP()">✅ Verify & Continue</button>
+        <button class="btn btn-secondary btn-full" style="margin-top:8px;" onclick="showAuthSection('auth-signin')">← Back</button>
+      </div>
+
+      <!-- ── STEP 1: Company Profile ── -->
+      <div class="auth-section" id="auth-profile">
+        <div class="step-indicator">
+          <div class="step-pill done" id="pill-0">✓ Sign In</div>
+          <div class="step-pill current" id="pill-1">Company Info</div>
+          <div class="step-pill" id="pill-2">Documents</div>
+        </div>
+        <div class="auth-title">Complete your profile</div>
+        <div class="auth-sub">Required to access the carbon credit marketplace</div>
+
+        <div class="form-group">
+          <label>🏭 Registered Company Name</label>
+          <input class="form-control" type="text" id="p-company" placeholder="e.g. Rajan Industries Pvt. Ltd.">
+        </div>
+        <div class="form-group">
+          <label>👤 Registered Owner / Director Name</label>
+          <input class="form-control" type="text" id="p-owner" placeholder="Full legal name as per MCA">
+        </div>
+        <div class="form-group">
+          <label>🔑 GSTIN Number</label>
+          <input class="form-control" type="text" id="p-gstin" placeholder="e.g. 29AABCR1234P1ZX" maxlength="15" style="text-transform:uppercase;">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div class="form-group">
+            <label>📱 Registered Mobile</label>
+            <input class="form-control" type="tel" id="p-mobile" placeholder="10-digit number">
+          </div>
+          <div class="form-group">
+            <label>🏭 Industry Sector</label>
+            <select class="form-control" id="p-sector">
+              <option value="">Select sector</option>
+              <option>Small Scale Industry</option><option>Iron &amp; Steel</option>
+              <option>Textile</option><option>Pharmaceutical</option>
+              <option>Agriculture</option><option>Cold Storage</option>
+              <option>Cement</option><option>Chemical</option><option>Other</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>📍 Registered Address</label>
+          <input class="form-control" type="text" id="p-address" placeholder="Unit address as per GST certificate">
+        </div>
+        <button class="btn btn-primary btn-full" onclick="saveProfileStep1()">Continue → Upload Documents</button>
+      </div>
+
+      <!-- ── STEP 2: Documents ── -->
+      <div class="auth-section" id="auth-docs">
+        <div class="step-indicator">
+          <div class="step-pill done">✓ Sign In</div>
+          <div class="step-pill done">✓ Company Info</div>
+          <div class="step-pill current">Documents</div>
+        </div>
+        <div class="auth-title">Verify your business</div>
+        <div class="auth-sub">Upload documents or verify instantly via DigiLocker</div>
+
+        <!-- DigiLocker option -->
+        <button class="digilocker-btn" onclick="verifyWithDigilocker()">
+          <span style="font-size:1.2rem;">🇮🇳</span>
+          <div style="text-align:left;">
+            <div style="font-size:.9rem;">Verify via DigiLocker</div>
+            <div style="font-size:.7rem;opacity:.8;">Auto-fetch GST, PAN & Incorporation cert</div>
+          </div>
+          <span style="margin-left:auto;font-size:.7rem;background:rgba(255,255,255,.2);padding:3px 8px;border-radius:6px;">Recommended</span>
+        </button>
+        <div id="digilocker-status" style="display:none;margin-top:8px;"></div>
+
+        <div class="auth-divider"><span>or upload manually</span></div>
+
+        <div class="form-group">
+          <label>📄 GST Certificate</label>
+          <div class="upload-zone" id="zone-gst" onclick="document.getElementById('file-gst').click()">
+            <input type="file" id="file-gst" accept=".pdf,.jpg,.png" onchange="fileUploaded('zone-gst','lbl-gst',this)">
+            <div style="font-size:1.5rem;margin-bottom:6px;">📤</div>
+            <div id="lbl-gst" style="font-size:.82rem;color:var(--muted);">Click to upload GST Certificate (PDF/JPG)</div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>🪪 PAN Card of Company / Director</label>
+          <div class="upload-zone" id="zone-pan" onclick="document.getElementById('file-pan').click()">
+            <input type="file" id="file-pan" accept=".pdf,.jpg,.png" onchange="fileUploaded('zone-pan','lbl-pan',this)">
+            <div style="font-size:1.5rem;margin-bottom:6px;">📤</div>
+            <div id="lbl-pan" style="font-size:.82rem;color:var(--muted);">Click to upload PAN Card (PDF/JPG)</div>
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:20px;">
+          <label>🏛️ Certificate of Incorporation / MSME Udyam</label>
+          <div class="upload-zone" id="zone-reg" onclick="document.getElementById('file-reg').click()">
+            <input type="file" id="file-reg" accept=".pdf,.jpg,.png" onchange="fileUploaded('zone-reg','lbl-reg',this)">
+            <div style="font-size:1.5rem;margin-bottom:6px;">📤</div>
+            <div id="lbl-reg" style="font-size:.82rem;color:var(--muted);">Click to upload (PDF/JPG)</div>
+          </div>
+        </div>
+
+        <button class="btn btn-primary btn-full" id="complete-profile-btn" onclick="completeProfile()">✅ Complete Registration</button>
+        <button class="btn btn-secondary btn-full" style="margin-top:8px;" onclick="showAuthSection('auth-profile')">← Back</button>
+      </div>
+
+      <!-- ── STEP 3: Success ── -->
+      <div class="auth-section" id="auth-success">
+        <div style="text-align:center;padding:10px 0 20px;">
+          <div style="font-size:3.5rem;margin-bottom:12px;">🎉</div>
+          <div class="auth-title" style="text-align:center;font-size:1.5rem;">You're verified!</div>
+          <div style="font-size:.85rem;color:var(--muted);margin:10px 0 20px;line-height:1.6;">
+            Your company profile is under review.<br>
+            You have full access to the platform.
+          </div>
+          <div class="verified-badge" style="margin-bottom:20px;">
+            <span>✅</span> Profile Submitted for Verification
+          </div>
+          <button class="btn btn-primary btn-full btn-lg" onclick="enterPlatform()">🌿 Enter CreditX Platform →</button>
+        </div>
+      </div>
+
+    </div><!-- /auth-body -->
+  </div><!-- /auth-card -->
+</div><!-- /auth-screen -->
+
+
+<!-- ══════════════════════════════════
+     MAIN PLATFORM
+══════════════════════════════════ -->
+<nav class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-badge">
+      <span class="logo-icon">🌿</span>
+      <span class="logo-text">CreditX</span>
+    </div>
+    <div class="logo-sub">Carbon Intelligence</div>
+    <!-- User badge populated by JS -->
+    <div class="sidebar-user" id="sidebar-user-badge">
+      <div class="user-avatar" id="sidebar-avatar">👤</div>
+      <div class="user-info">
+        <div class="user-name" id="sidebar-user-name">User</div>
+        <div class="user-status" id="sidebar-user-status">● Verified</div>
+      </div>
+      <span class="user-logout" onclick="signOut()">Sign out</span>
+    </div>
+  </div>
+  <div class="sidebar-nav">
+    <div class="nav-section">Main</div>
+    <div class="nav-item active" onclick="showPage('calculator',this)"><span class="nav-icon">🧮</span> Emission Calculator</div>
+
+    <div class="nav-section">Trading</div>
+    <div class="nav-item" onclick="showPage('marketplace',this)"><span class="nav-icon">🏪</span> Carbon Marketplace <span class="nav-badge">Live</span></div>
+    <div class="nav-item" onclick="showPage('blockchain',this)"><span class="nav-icon">⛓️</span> Blockchain Ledger</div>
+    <div class="nav-item" onclick="showPage('portfolio',this)"><span class="nav-icon">💼</span> My Portfolio</div>
+
+    <div class="nav-section">Compliance</div>
+    <div class="nav-item" onclick="showPage('guidelines',this)"><span class="nav-icon">📜</span> Govt. Guidelines</div>
+    <div class="nav-item" onclick="showPage('report',this)"><span class="nav-icon">📄</span> Generate Report</div>
+    <div class="nav-item" onclick="showPage('scope3',this)"><span class="nav-icon">🔍</span> Scope 3 Analyser</div>
+
+    <div class="nav-section">Insights</div>
+    <div class="nav-item" onclick="showPage('ai',this)"><span class="nav-icon">🧭</span> Operations Advisor</div>
+    <div class="nav-item" onclick="showPage('dashboard',this)"><span class="nav-icon">📊</span> Dashboard</div>
+  </div>
+  <div class="sidebar-footer">BEE · CCTS 2023 · Carbon Intelligence</div>
+</nav>
+
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-title" id="topbar-title">Emission Calculator</div>
+    <div class="topbar-right">
+      <span class="company-badge" id="topbar-company">🏭 Rajan Industries Pvt. Ltd.</span>
+      <span class="score-pill" id="global-score">Score: 74/100</span>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- ════ CALCULATOR ════ -->
+    <div class="page active" id="page-calculator">
+      <div class="page-header">
+        <h2>Emission Calculator</h2>
+        <p>Enter your monthly usage data to calculate your carbon footprint and earned credits</p>
+      </div>
+      <div style="margin-bottom:16px;">
+        <p style="font-size:.85rem;color:var(--muted);margin-bottom:8px;">Quick Fill — Select your industry type:</p>
+        <span class="chip" onclick="fillPreset('ssi')">🏭 Small Scale Industry</span>
+        <span class="chip" onclick="fillPreset('textile')">🧵 Textile Unit</span>
+        <span class="chip" onclick="fillPreset('pharma')">💊 Pharma Plant</span>
+        <span class="chip" onclick="fillPreset('cold')">🧊 Cold Storage</span>
+        <span class="chip" onclick="fillPreset('cement')">🪨 Cement Works</span>
+      </div>
+      <div class="grid2">
+        <div>
+          <div class="card">
+            <div class="section-label">📋 Monthly Input Data</div>
+            <div class="form-group">
+              <label>⚡ Electricity Consumed <span style="font-size:.72rem;color:var(--leaf);">(from EB bill)</span></label>
+              <div class="input-with-unit"><input class="form-control" type="number" id="c-elec" placeholder="e.g. 5000" min="0" oninput="syncS('c-elec','s-elec',0,20000)"><span class="unit">kWh</span></div>
+              <input type="range" class="slider" id="s-elec" min="0" max="20000" value="0" oninput="syncN('c-elec',this.value,'s-elec',0,20000)">
+            </div>
+            <div class="form-group">
+              <label>⛽ Fuel / Diesel Used <span style="font-size:.72rem;color:var(--leaf);">(generators + boilers)</span></label>
+              <div class="input-with-unit"><input class="form-control" type="number" id="c-fuel" placeholder="e.g. 800" min="0" oninput="syncS('c-fuel','s-fuel',0,5000)"><span class="unit">Liters</span></div>
+              <input type="range" class="slider" id="s-fuel" min="0" max="5000" value="0" oninput="syncN('c-fuel',this.value,'s-fuel',0,5000)">
+            </div>
+            <div class="form-group">
+              <label>🚌 Transport Distance <span style="font-size:.72rem;color:var(--leaf);">(logistics + commute)</span></label>
+              <div class="input-with-unit"><input class="form-control" type="number" id="c-trans" placeholder="e.g. 2000" min="0" oninput="syncS('c-trans','s-trans',0,20000)"><span class="unit">km</span></div>
+              <input type="range" class="slider" id="s-trans" min="0" max="20000" value="0" oninput="syncN('c-trans',this.value,'s-trans',0,20000)">
+            </div>
+            <div class="form-group">
+              <label>🏭 Production Output <span style="font-size:.72rem;color:var(--leaf);">(for SEC)</span></label>
+              <div class="input-with-unit"><input class="form-control" type="number" id="c-prod" placeholder="e.g. 500" min="0"><span class="unit">tons</span></div>
+            </div>
+            <div class="card card-gold" style="margin-bottom:16px;">
+              <div style="font-size:.8rem;color:var(--muted);font-weight:600;margin-bottom:8px;">⚙️ Emission Factors (Customisable)</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+                <div><label style="font-size:.72rem;color:var(--muted);display:block;margin-bottom:3px;">Electricity</label><input class="form-control" type="number" id="f-elec" value="0.82" step="0.01" style="padding:7px 10px;font-size:.85rem;"><span style="font-size:.68rem;color:var(--muted);">kg/kWh</span></div>
+                <div><label style="font-size:.72rem;color:var(--muted);display:block;margin-bottom:3px;">Fuel</label><input class="form-control" type="number" id="f-fuel" value="2.31" step="0.01" style="padding:7px 10px;font-size:.85rem;"><span style="font-size:.68rem;color:var(--muted);">kg/liter</span></div>
+                <div><label style="font-size:.72rem;color:var(--muted);display:block;margin-bottom:3px;">Transport</label><input class="form-control" type="number" id="f-trans" value="0.12" step="0.001" style="padding:7px 10px;font-size:.85rem;"><span style="font-size:.68rem;color:var(--muted);">kg/km</span></div>
+              </div>
+            </div>
+            <button class="btn btn-primary btn-lg btn-full" onclick="calculate()">⚡ Calculate Emissions &amp; Credits</button>
+          </div>
+        </div>
+        <div>
+          <div class="card" id="calc-empty">
+            <div style="text-align:center;padding:40px;color:var(--muted);">
+              <div style="font-size:3rem;margin-bottom:12px;opacity:.3;">📊</div>
+              <p style="font-size:.9rem;">Results appear here after calculation.</p>
+            </div>
+          </div>
+          <div id="calc-results" style="display:none;">
+            <div class="grid3" style="margin-bottom:16px;">
+              <div class="stat-card"><div class="stat-icon">💨</div><div class="stat-value red" id="r-co2">--</div><div class="stat-label">kg CO₂ / month</div></div>
+              <div class="stat-card"><div class="stat-icon">🪙</div><div class="stat-value gold" id="r-credits">--</div><div class="stat-label">Credits Earned</div></div>
+              <div class="stat-card"><div class="stat-icon">💹</div><div class="stat-value green" id="r-value">--</div><div class="stat-label">Credit Value (₹)</div></div>
+            </div>
+            <div class="card">
+              <div class="section-label">📊 Emission Breakdown</div>
+              <div style="margin-bottom:12px;"><div style="display:flex;justify-content:space-between;font-size:.85rem;margin-bottom:5px;"><span>⚡ Electricity</span><span id="b-elec" style="font-weight:700;">--</span></div><div class="progress-bg"><div class="progress-bar" id="pb-elec" style="background:var(--gold2);width:0%"></div></div></div>
+              <div style="margin-bottom:12px;"><div style="display:flex;justify-content:space-between;font-size:.85rem;margin-bottom:5px;"><span>⛽ Fuel</span><span id="b-fuel" style="font-weight:700;">--</span></div><div class="progress-bg"><div class="progress-bar" id="pb-fuel" style="background:var(--red);width:0%"></div></div></div>
+              <div><div style="display:flex;justify-content:space-between;font-size:.85rem;margin-bottom:5px;"><span>🚌 Transport</span><span id="b-trans" style="font-weight:700;">--</span></div><div class="progress-bg"><div class="progress-bar" id="pb-trans" style="background:var(--slate2);width:0%"></div></div></div>
+            </div>
+            <div class="card">
+              <div class="section-label">💡 Smart Recommendation</div>
+              <div style="background:var(--sage);border:1px solid var(--mint);border-radius:10px;padding:16px;display:flex;gap:12px;">
+                <span style="font-size:1.6rem;" id="ai-icon">💡</span>
+                <div><div style="font-weight:700;color:var(--forest);margin-bottom:4px;" id="ai-title">Smart Tip</div><div style="font-size:.85rem;color:var(--charcoal);line-height:1.6;" id="ai-text">--</div></div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="section-label">🌏 BEE Compliance Status</div>
+              <div id="bee-status" style="font-size:.88rem;line-height:1.7;color:var(--muted);"></div>
+            </div>
+            <button class="btn btn-primary btn-full" style="margin-top:4px;" onclick="saveToPortfolio()">🪙 Mint Credits to Blockchain</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ MARKETPLACE ════ -->
+    <div class="page" id="page-marketplace">
+      <div class="page-header"><h2>Carbon Marketplace</h2><p>Buy &amp; sell verified blockchain carbon credits with other industries</p></div>
+      <div class="alert alert-blue">⛓️ <div>All credits are blockchain-verified. Double-counting prevented. Last block: <strong id="bc-stats-bar">Loading...</strong></div></div>
+      <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('market','sell-tab',this)">🏷️ Buy Credits</button>
+        <button class="tab-btn" onclick="switchTab('market','buy-tab',this)">📤 Sell My Credits</button>
+        <button class="tab-btn" onclick="switchTab('market','history-tab',this)">📋 Trade History</button>
+      </div>
+      <div class="tab-content active" id="sell-tab">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
+          <input class="form-control" placeholder="🔍 Search companies or sectors..." style="width:260px;display:inline-block;">
+          <select class="form-control" style="width:auto;padding:8px 14px;font-size:.82rem;"><option>All Sectors</option><option>Manufacturing</option><option>Textile</option><option>Pharma</option><option>Agriculture</option></select>
+        </div>
+        <div class="grid3" id="market-grid"></div>
+      </div>
+      <div class="tab-content" id="buy-tab">
+        <div class="card" style="max-width:520px;">
+          <div class="section-label">📤 List My Credits for Sale</div>
+          <div class="form-group"><label>Credits to Sell</label><div class="input-with-unit"><input class="form-control" type="number" placeholder="e.g. 2.5" id="sell-qty"><span class="unit">credits</span></div></div>
+          <div class="form-group"><label>Asking Price per Credit</label><div class="input-with-unit"><input class="form-control" type="number" placeholder="e.g. 800" id="sell-price"><span class="unit">₹</span></div></div>
+          <div class="form-group"><label>Verification Certificate No.</label><input class="form-control" type="text" placeholder="CERT-2025-XXXXXX"></div>
+          <div class="alert alert-green" style="margin-bottom:12px;">🔒 Credits escrowed in smart contract until buyer confirms. Gas fee: ~₹12</div>
+          <button class="btn btn-primary btn-full" onclick="listCredits()">🚀 List on Marketplace</button>
+        </div>
+      </div>
+      <div class="tab-content" id="history-tab">
+        <div class="card">
+          <table><thead><tr><th>Date</th><th>Type</th><th>Company</th><th>Credits</th><th>Price/cr</th><th>Total</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr><td>Mar 28</td><td><span class="badge badge-green">BUY</span></td><td>GreenSteel Ltd.</td><td>2.0</td><td>₹780</td><td>₹1,560</td><td><span class="badge badge-slate">Confirmed</span></td></tr>
+            <tr><td>Mar 15</td><td><span class="badge badge-gold">SELL</span></td><td>EcoPharma</td><td>0.5</td><td>₹820</td><td>₹410</td><td><span class="badge badge-slate">Confirmed</span></td></tr>
+          </tbody></table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ BLOCKCHAIN ════ -->
+    <div class="page" id="page-blockchain">
+      <div class="page-header"><h2>Blockchain Ledger</h2><p>Immutable on-chain record of all carbon credits minted and traded</p></div>
+      <div class="grid3" style="margin-bottom:20px;">
+        <div class="stat-card"><div class="stat-icon">⛓️</div><div class="stat-value slate" id="bc-block">—</div><div class="stat-label">Latest Block</div></div>
+        <div class="stat-card"><div class="stat-icon">🪙</div><div class="stat-value green" id="bc-total">—</div><div class="stat-label">Total Credits Minted</div></div>
+        <div class="stat-card"><div class="stat-icon">🔒</div><div class="stat-value gold">100%</div><div class="stat-label">Verification Rate</div></div>
+      </div>
+      <div class="card"><div class="section-label">📋 Recent Transactions</div><div id="blockchain-txs"></div></div>
+      <div class="card card-slate">
+        <div class="section-label">🔍 Verify a Credit</div>
+        <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
+          <div style="flex:1;min-width:220px;"><label style="font-size:.82rem;color:var(--muted);font-weight:600;display:block;margin-bottom:6px;">Token ID or Tx Hash</label><input class="form-control" type="text" id="verify-input" placeholder="e.g. 0x4a3b2c... or CX-2025-00123"></div>
+          <button class="btn btn-slate" onclick="verifyCredit()">🔍 Verify on Chain</button>
+        </div>
+        <div id="verify-result" style="margin-top:12px;font-size:.85rem;"></div>
+      </div>
+    </div>
+
+    <!-- ════ PORTFOLIO ════ -->
+    <div class="page" id="page-portfolio">
+      <div class="page-header"><h2>My Portfolio</h2><p>Your credits, holdings, and carbon reduction performance</p></div>
+      <div class="grid4" style="margin-bottom:20px;">
+        <div class="stat-card"><div class="stat-icon">🪙</div><div class="stat-value gold" id="port-total-credits">3.748</div><div class="stat-label">Credits Held</div></div>
+        <div class="stat-card"><div class="stat-icon">💹</div><div class="stat-value green" id="port-total-value">₹29,984</div><div class="stat-label">Portfolio Value</div></div>
+        <div class="stat-card"><div class="stat-icon">📉</div><div class="stat-value green">-24%</div><div class="stat-label">Emission Reduction YTD</div></div>
+        <div class="stat-card"><div class="stat-icon">🏅</div><div class="stat-value slate">Silver</div><div class="stat-label">BEE Rating Tier</div></div>
+      </div>
+      <div class="card"><div class="section-label">📋 Credit Holdings</div><div id="portfolio-holdings">Loading...</div></div>
+      <div class="card"><div class="section-label">📅 Monthly Emission History</div><canvas id="portfolioChart" height="130"></canvas></div>
+    </div>
+
+    <!-- ════ GUIDELINES ════ -->
+    <div class="page" id="page-guidelines">
+      <div class="page-header"><h2>Government Guidelines</h2><p>Regulatory frameworks for carbon credits and energy efficiency in India</p></div>
+      <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('guide','bee-tab',this)">🏛️ BEE Framework</button>
+        <button class="tab-btn" onclick="switchTab('guide','pac-tab',this)">🌿 PAT Scheme</button>
+        <button class="tab-btn" onclick="switchTab('guide','escer-tab',this)">📋 ESCER Rules</button>
+        <button class="tab-btn" onclick="switchTab('guide','cred-tab',this)">🪙 Carbon Credit Norms</button>
+      </div>
+      <div class="tab-content active" id="bee-tab">
+        <div class="alert alert-blue">🏛️ <div><strong>Bureau of Energy Efficiency (BEE)</strong> — Ministry of Power, Government of India. Legally binding for Designated Consumers (DCs) under the Energy Conservation Act, 2001.</div></div>
+        <div class="guideline-card"><div class="guideline-title">SEC Target Compliance</div><div class="guideline-body">Designated Consumers must achieve their Specific Energy Consumption (SEC) targets within the PAT cycle period. Failure requires purchasing ESCerts or paying penalties up to ₹10 lakh per day.</div><div class="guideline-meta">Source: BEE Circular No. 31/2/2012-BEE · Updated 2023</div></div>
+        <div class="guideline-card"><div class="guideline-title">Mandatory Energy Audits</div><div class="guideline-body">All Designated Consumers must conduct mandatory energy audits every 3 years by a BEE-accredited energy auditor. Results must be submitted on the BEE portal within 60 days.</div><div class="guideline-meta">Source: Energy Conservation Act 2001, Section 14 · Rule 8</div></div>
+        <div class="guideline-card warning"><div class="guideline-title">⚠️ Penalty Structure (2024)</div><div class="guideline-body">Non-compliance: ₹10 lakh first offence, ₹10 lakh + ₹1,000/day continuing. Failure to designate Energy Manager: ₹5 lakh. Failure to submit annual returns: ₹1 lakh.</div><div class="guideline-meta">Source: Energy Conservation (Amendment) Act 2022</div></div>
+        <div class="guideline-card info"><div class="guideline-title">ℹ️ 2024 Amendment — Carbon Credits</div><div class="guideline-body">The Energy Conservation (Amendment) Act 2022 empowers the Central Government to specify carbon credits. Carbon Credit Certificates (CCCs) are now tradeable on government-designated exchanges under CCTS 2023.</div><div class="guideline-meta">Source: Energy Conservation (Amendment) Act 2022 · CCTS Rules 2023</div></div>
+      </div>
+      <div class="tab-content" id="pac-tab">
+        <div class="alert alert-green">🌿 <div><strong>Perform, Achieve &amp; Trade (PAT) Scheme</strong> — India's flagship market-based mechanism to enhance energy efficiency in energy-intensive industries.</div></div>
+        <div class="guideline-card"><div class="guideline-title">PAT Cycle VI (2023–2026)</div><div class="guideline-body">Current cycle covers 13 sectors: Aluminium, Cement, Chlor-Alkali, Fertilizer, Iron &amp; Steel, Paper &amp; Pulp, Petrochemical, Petroleum Refinery, Pharmaceutical, Textile, Railways, Municipal Corporation, and Thermal Power Plants.</div><div class="guideline-meta">Source: MoP Notification · PAT Cycle VI Launch 2023</div></div>
+        <div class="guideline-card"><div class="guideline-title">ESCert Trading Rules</div><div class="guideline-body">1 ESCert = 1 Metric Tonne of Oil Equivalent (MTOE) saved. Tradeable on IEX and PXIL. Over-achievers earn ESCerts; under-achievers must buy or pay penalty.</div><div class="guideline-meta">Source: PAT Trading Guidelines 2020</div></div>
+      </div>
+      <div class="tab-content" id="escer-tab">
+        <div class="alert alert-blue">📋 <div><strong>Energy Savings Certificate (ESCert) Rules</strong> — Governing framework for certificate issuance and trading under EC Act 2001.</div></div>
+        <div class="guideline-card"><div class="guideline-title">ESCert Issuance Process</div><div class="guideline-body">Step 1: Submit APR to BEE by June 30. Step 2: BEE-empanelled agency verifies. Step 3: ESCerts issued within 90 days. Step 4: Credits appear in DC account for trading.</div><div class="guideline-meta">Source: BEE ESCert Procedure Manual 2019</div></div>
+        <div class="guideline-card warning"><div class="guideline-title">⚠️ APR Submission Deadline</div><div class="guideline-body">Annual Performance Report must be submitted by June 30 each year. Late submission: ₹10,000/day penalty. Three consecutive failures may trigger enhanced compliance review.</div><div class="guideline-meta">Source: EC Act 2001 · BEE Circular 2024</div></div>
+      </div>
+      <div class="tab-content" id="cred-tab">
+        <div class="alert alert-gold">🪙 <div><strong>Carbon Credit Trading Scheme (CCTS) 2023</strong> — India's national carbon market framework.</div></div>
+        <div class="guideline-card"><div class="guideline-title">Carbon Credit Certificate (CCC)</div><div class="guideline-body">1 CCC = 1 tonne of CO₂ equivalent reduced below baseline. Issued by BEE after third-party verification. Tradeable on IEX and PXIL.</div><div class="guideline-meta">Source: CCTS Rules 2023 · Ministry of Power Notification</div></div>
+        <div class="guideline-card info"><div class="guideline-title">ℹ️ International Carbon Market Linkage</div><div class="guideline-body">Under Article 6.2 of the Paris Agreement, India has bilateral agreements with Singapore, Sweden, and UAE for Internationally Transferred Mitigation Outcomes (ITMOs). Indian industries can export ITMOs at $15–45/tonne vs ₹600–900 domestic.</div><div class="guideline-meta">Source: MoEFCC Article 6 Policy 2024</div></div>
+      </div>
+    </div>
+
+    <!-- ════ REPORT GENERATOR ════ -->
+    <div class="page" id="page-report">
+      <div class="page-header"><h2>Government Report Generator</h2><p>BEE-compliant Annual Performance Reports ready for submission</p></div>
+      <div class="grid2">
+        <div class="card">
+          <div class="section-label">📝 Report Configuration</div>
+          <div class="form-group"><label>🏭 Company Name</label><input class="form-control" type="text" id="rep-company" value="Rajan Industries Pvt. Ltd."></div>
+          <div class="form-group"><label>🔑 GSTIN</label><input class="form-control" type="text" id="rep-gstin" value="29AABCR1234P1ZX"></div>
+          <div class="form-group"><label>📍 Address</label><input class="form-control" type="text" id="rep-address" value="Plot No. 47, MIDC Industrial Area, Pune - 411019"></div>
+          <div class="form-group"><label>🏭 Sector</label><select class="form-control" id="rep-sector"><option>Small Scale Industry</option><option>Textile</option><option>Pharmaceutical</option><option>Cement</option><option>Steel</option></select></div>
+          <div class="form-group"><label>📅 Period</label><select class="form-control" id="rep-period"><option>FY 2024–25</option><option>FY 2023–24</option><option>FY 2022–23</option></select></div>
+          <div class="form-group"><label>⚡ Total Electricity (kWh)</label><input class="form-control" type="number" id="rep-elec" value="58400"></div>
+          <div class="form-group"><label>⛽ Total Fuel (liters)</label><input class="form-control" type="number" id="rep-fuel" value="9600"></div>
+          <div class="form-group"><label>🚌 Total Transport (km)</label><input class="form-control" type="number" id="rep-trans" value="24000"></div>
+          <div class="form-group"><label>🏭 Production Output (tons)</label><input class="form-control" type="number" id="rep-prod" value="6000"></div>
+          <div class="form-group"><label>👤 Energy Manager</label><input class="form-control" type="text" id="rep-mgr" value="Rajesh Kumar Sharma"></div>
+          <div class="form-group"><label>🎓 BEE Cert. No.</label><input class="form-control" type="text" id="rep-cert" value="BEE-EM-2019-08847"></div>
+          <button class="btn btn-primary btn-full" style="margin-bottom:10px;" onclick="generateReport()">📄 Generate Report</button>
+          <button class="btn btn-secondary btn-full" onclick="printReport()">🖨️ Download / Print PDF</button>
+        </div>
+        <div>
+          <div class="card" style="padding:0;overflow:hidden;">
+            <div class="report-preview" id="report-content">
+              <div style="text-align:center;padding:40px;color:var(--muted);">
+                <div style="font-size:3rem;margin-bottom:12px;opacity:.25;">📄</div>
+                <p>Fill in details and click <strong>Generate Report</strong></p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ SCOPE 3 ════ -->
+    <div class="page" id="page-scope3">
+      <div class="page-header"><h2>Scope 3 Analyser</h2><p>Extended value-chain emissions — suppliers, logistics, end-of-life</p></div>
+      <div class="alert alert-gold">📢 <div>Scope 3 emissions represent your <strong>full value-chain footprint</strong>. Increasingly required for ESG reporting and international credit recognition.</div></div>
+      <div class="grid2">
+        <div class="card">
+          <div class="section-label">📦 Upstream</div>
+          <div class="form-group"><label>🏭 Purchased Goods Emissions (kg CO₂)</label><input class="form-control" type="number" id="s3-goods" placeholder="From supplier declarations"></div>
+          <div class="form-group"><label>🚢 Upstream Transport (kg CO₂)</label><input class="form-control" type="number" id="s3-uptrans" placeholder="Inbound logistics"></div>
+          <div class="form-group"><label>🏗️ Capital Goods Emissions (kg CO₂)</label><input class="form-control" type="number" id="s3-capital" placeholder="Amortised machinery emissions"></div>
+        </div>
+        <div class="card">
+          <div class="section-label">🚛 Downstream</div>
+          <div class="form-group"><label>🚛 Downstream Transport (kg CO₂)</label><input class="form-control" type="number" id="s3-dntrans" placeholder="Outbound logistics"></div>
+          <div class="form-group"><label>🗑️ Product End-of-Life (kg CO₂)</label><input class="form-control" type="number" id="s3-eol" placeholder="Estimated disposal emissions"></div>
+          <div class="form-group"><label>🏬 Customer Use-Phase (kg CO₂)</label><input class="form-control" type="number" id="s3-use" placeholder="Product in-use emissions"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="section-label">🗺️ Value Chain Map</div>
+        <div style="display:flex;align-items:center;justify-content:center;gap:4px;flex-wrap:wrap;padding:16px 0;font-size:.8rem;text-align:center;">
+          <div style="background:var(--sage);border:1px solid var(--mint);border-radius:10px;padding:12px 16px;min-width:90px;">🌾<br>Raw Materials<br><span style="color:var(--muted);">Scope 3</span></div>
+          <div style="color:var(--leaf);font-size:1.4rem;">→</div>
+          <div style="background:var(--forest);color:#fff;border-radius:10px;padding:12px 16px;min-width:90px;font-weight:700;">🏭<br>YOUR<br>PLANT<br><span style="font-size:.72rem;opacity:.7;">Scope 1+2</span></div>
+          <div style="color:var(--leaf);font-size:1.4rem;">→</div>
+          <div style="background:var(--sage);border:1px solid var(--mint);border-radius:10px;padding:12px 16px;min-width:90px;">🚛<br>Downstream<br><span style="color:var(--muted);">Scope 3</span></div>
+          <div style="color:var(--leaf);font-size:1.4rem;">→</div>
+          <div style="background:var(--sage);border:1px solid var(--mint);border-radius:10px;padding:12px 16px;min-width:90px;">♻️<br>End of Life<br><span style="color:var(--muted);">Scope 3</span></div>
+        </div>
+        <div id="scope3-result" style="display:none;margin-top:10px;" class="alert alert-green"></div>
+        <button class="btn btn-primary" style="margin-top:8px;" onclick="calcScope3()">🔍 Calculate Full Value Chain</button>
+      </div>
+    </div>
+
+    <!-- ════ AI ADVISOR ════ -->
+    <div class="page" id="page-ai">
+      <div class="page-header"><h2>Operations Advisor</h2><p>Practical recommendations to reduce emissions and maximise carbon credit revenue</p></div>
+      <div class="grid2">
+        <div>
+          <div class="card card-green">
+            <div class="section-label">🎯 Top Priority Actions</div>
+            <div class="timeline">
+              <div class="timeline-item"><div class="timeline-dot"></div><div class="timeline-date">High Impact · Immediate</div><div class="timeline-title">Shift Generator Use to Off-Peak Hours</div><div class="timeline-body">Running generators during 10PM–6AM reduces grid stress and qualifies for Time-of-Day tariff rebates. Estimated savings: ₹12,400/month + 0.08 credits.</div></div>
+              <div class="timeline-item"><div class="timeline-dot" style="background:var(--gold2);box-shadow:0 0 0 2px var(--gold2);"></div><div class="timeline-date">Medium Impact · Next 30 Days</div><div class="timeline-title">Replace 40% of Diesel Fleet with CNG</div><div class="timeline-body">CNG emits 25% less CO₂ per km than diesel. Fleet CNG conversion on 5 vehicles: one-time ₹85,000, savings ₹4,200/month, +0.12 credits/month.</div></div>
+              <div class="timeline-item"><div class="timeline-dot" style="background:var(--slate2);box-shadow:0 0 0 2px var(--slate2);"></div><div class="timeline-date">Planned · Next Quarter</div><div class="timeline-title">Rooftop Solar (50 kWp)</div><div class="timeline-body">50 kWp solar offsets ~5,800 kWh/month. ROI: 4.2 years. Additional carbon credits: 0.48/month. Eligible for MNRE subsidy up to 40%.</div></div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="card"><div class="section-label">📈 Projected Impact</div><canvas id="projectionChart" height="160"></canvas></div>
+          <div class="card card-gold">
+            <div class="section-label">💰 Revenue Projection</div>
+            <table style="font-size:.82rem;">
+              <thead><tr><th>Action</th><th>Credits/mo</th><th>Revenue/mo</th></tr></thead>
+              <tbody>
+                <tr><td>Peak-shift</td><td class="green" style="font-weight:700;">+0.08</td><td class="green" style="font-weight:700;">+₹640</td></tr>
+                <tr><td>CNG fleet</td><td class="green" style="font-weight:700;">+0.12</td><td class="green" style="font-weight:700;">+₹960</td></tr>
+                <tr><td>Solar</td><td class="green" style="font-weight:700;">+0.48</td><td class="green" style="font-weight:700;">+₹3,840</td></tr>
+                <tr style="border-top:2px solid var(--mint);font-weight:700;"><td>Total potential</td><td class="green">+0.68</td><td class="green">+₹5,440</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ DASHBOARD (under Insights) ════ -->
+    <div class="page" id="page-dashboard">
+      <div class="page-header"><h2>Dashboard &amp; Insights</h2><p>Real-time carbon intelligence for your operations</p></div>
+      <div class="grid4" style="margin-bottom:20px;">
+        <div class="stat-card"><div class="stat-icon">💨</div><div class="stat-value red" id="dash-co2">1,248 kg</div><div class="stat-label">CO₂ This Month</div></div>
+        <div class="stat-card"><div class="stat-icon">🪙</div><div class="stat-value gold" id="dash-credits">1.248</div><div class="stat-label">Credits Earned</div></div>
+        <div class="stat-card"><div class="stat-icon">💹</div><div class="stat-value green" id="dash-value">₹8,736</div><div class="stat-label">Credit Market Value</div></div>
+        <div class="stat-card"><div class="stat-icon">📉</div><div class="stat-value green">-12%</div><div class="stat-label">vs Last Month</div></div>
+      </div>
+      <div class="grid2">
+        <div class="card"><div class="section-label">📈 Emission Trend (6 Months)</div><canvas id="trendChart" height="160"></canvas></div>
+        <div class="card"><div class="section-label">🥧 Emission Sources</div><canvas id="pieChart" height="160"></canvas></div>
+      </div>
+      <div class="grid2">
+        <div class="card">
+          <div class="section-label">⚡ Source Breakdown</div>
+          <div style="margin-bottom:14px;"><div style="display:flex;justify-content:space-between;font-size:.85rem;margin-bottom:5px;"><span>⚡ Electricity</span><span class="green" style="font-weight:700;">492 kg</span></div><div class="progress-bg"><div class="progress-bar" style="width:39%;background:var(--gold2);"></div></div></div>
+          <div style="margin-bottom:14px;"><div style="display:flex;justify-content:space-between;font-size:.85rem;margin-bottom:5px;"><span>⛽ Fuel/Gas</span><span style="font-weight:700;color:var(--red)">578 kg</span></div><div class="progress-bg"><div class="progress-bar" style="width:46%;background:var(--red);"></div></div></div>
+          <div><div style="display:flex;justify-content:space-between;font-size:.85rem;margin-bottom:5px;"><span>🚌 Transport</span><span class="slate" style="font-weight:700;">178 kg</span></div><div class="progress-bg"><div class="progress-bar" style="width:14%;background:var(--slate2);"></div></div></div>
+        </div>
+        <div class="card">
+          <div class="section-label">🏆 Green Score</div>
+          <div class="gauge-wrap">
+            <div class="gauge-ring" style="background:conic-gradient(var(--forest2) 266deg,var(--parchment) 266deg);">
+              <div class="gauge-inner"><div class="gauge-val green">74</div><div style="font-size:.72rem;color:var(--muted);">/ 100</div></div>
+            </div>
+            <div style="margin-top:10px;font-size:.9rem;font-weight:700;color:var(--forest2);">👍 Good Standing</div>
+            <div style="font-size:.78rem;color:var(--muted);text-align:center;margin-top:4px;">18% below industry average emissions</div>
+          </div>
+        </div>
+      </div>
+      <div class="alert alert-green">🌱 <div><strong>AI Insight:</strong> Fuel consumption is your highest emission source (46%). Switching 20% of fleet to CNG could reduce monthly CO₂ by ~115 kg and earn 0.12 additional credits.</div></div>
+      <div class="alert alert-gold">⚠️ <div><strong>BEE Compliance:</strong> Your SEC target deadline is June 30, 2025. Current performance: 94% of target achieved.</div></div>
+    </div>
+
+  </div>
+</div>
+
+<div id="toast">✅ Action complete</div>
+
+<!-- BUY MODAL -->
+<div id="buy-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:20px;padding:32px;max-width:420px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.2);">
+    <div style="font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:700;margin-bottom:4px;" id="modal-company">Buy Credits</div>
+    <div style="font-size:.8rem;color:var(--muted);margin-bottom:20px;" id="modal-sub">—</div>
+    <div class="form-group"><label>Quantity to Buy</label><div class="input-with-unit"><input class="form-control" type="number" id="modal-qty" value="1" min="0.1" step="0.1"><span class="unit">credits</span></div></div>
+    <div style="background:var(--sage);border:1px solid var(--mint);border-radius:10px;padding:14px;margin-bottom:16px;font-size:.88rem;">
+      Price/credit: <strong id="modal-price">₹800</strong><br>
+      Total: <strong id="modal-total">₹800</strong><br>
+      Platform fee (1%): <strong id="modal-fee">₹8</strong>
+    </div>
+    <div style="display:flex;gap:10px;">
+      <button class="btn btn-primary" style="flex:1;" onclick="confirmBuy()">✅ Confirm Purchase</button>
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+<script>
+// ══════════════════════════════════
+// FIREBASE + SESSION CONFIG
+// Loaded from Flask so the app can run locally with your Firebase project.
+// ══════════════════════════════════
+let firebaseConfig = null;
+let firebaseReady = false;
+let auth = null;
+let DEMO_MODE = true;
+const SESSION_KEY = 'creditx-session-v1';
+
+// Current user state
+let currentUser = null;
+let otpPhone    = '';
+let demoOTP     = '';
+let profileData = {};
+
+// ══════════════════════════════════
+// API HELPER
+// ══════════════════════════════════
+const API = '';
+async function api(path, method='GET', body=null) {
+  const opts = { method, headers:{'Content-Type':'application/json'} };
+  if (body) opts.body = JSON.stringify(body);
+  try {
+    const res = await fetch(API+path, opts);
+    return await res.json();
+  } catch(err) {
+    console.error('API error:', path, err);
+    toast('⚠️ Could not reach server. Is Flask running on port 8080?');
+    return null;
+  }
+}
+
+function saveSession() {
+  const payload = {
+    currentUser,
+    profileData,
+    demoMode: DEMO_MODE
+  };
+  localStorage.setItem(SESSION_KEY, JSON.stringify(payload));
+}
+
+function restoreSession() {
+  try {
+    const raw = localStorage.getItem(SESSION_KEY);
+    if (!raw) return false;
+    const parsed = JSON.parse(raw);
+    currentUser = parsed.currentUser || null;
+    profileData = parsed.profileData || {};
+    return !!currentUser;
+  } catch (err) {
+    console.warn('Could not restore local session:', err);
+    return false;
+  }
+}
+
+function clearSession() {
+  localStorage.removeItem(SESSION_KEY);
+}
+
+function getFirebaseStoredUser() {
+  const stores = [window.localStorage, window.sessionStorage];
+  for (const store of stores) {
+    try {
+      for (let i = 0; i < store.length; i += 1) {
+        const key = store.key(i);
+        if (!key || !key.startsWith('firebase:authUser:')) continue;
+        const raw = store.getItem(key);
+        if (!raw) continue;
+        const parsed = JSON.parse(raw);
+        if (parsed && parsed.uid) {
+          return {
+            uid: parsed.uid,
+            email: parsed.email || '',
+            displayName: parsed.displayName || parsed.display_name || '',
+            photoURL: parsed.photoURL || ''
+          };
+        }
+      }
+    } catch (err) {
+      console.warn('Could not inspect Firebase stored user:', err);
+    }
+  }
+  return null;
+}
+
+function showAuthMessage(message, kind = 'info') {
+  const el = document.getElementById('auth-status');
+  if (!el) return;
+  el.className = `auth-status show ${kind}`;
+  el.textContent = message;
+}
+
+function clearAuthMessage() {
+  const el = document.getElementById('auth-status');
+  if (!el) return;
+  el.className = 'auth-status';
+  el.textContent = '';
+}
+
+function fillProfileForm(data = {}) {
+  const map = {
+    'p-company': data.company_name || '',
+    'p-owner': data.owner_name || data.displayName || data.display_name || '',
+    'p-gstin': data.gstin || '',
+    'p-mobile': data.mobile || data.phone || '',
+    'p-sector': data.sector || '',
+    'p-address': data.address || ''
+  };
+  Object.entries(map).forEach(([id, value]) => {
+    const el = document.getElementById(id);
+    if (el) el.value = value;
+  });
+}
+
+function hydrateReportForm() {
+  const fields = {
+    'rep-company': profileData.company_name || 'Rajan Industries Pvt. Ltd.',
+    'rep-gstin': profileData.gstin || '29AABCR1234P1ZX',
+    'rep-address': profileData.address || 'Plot No. 47, MIDC Industrial Area, Pune - 411019',
+    'rep-sector': profileData.sector || 'Small Scale Industry',
+    'rep-mgr': profileData.owner_name || currentUser?.displayName || currentUser?.display_name || 'Rajesh Kumar Sharma',
+    'rep-cert': profileData.bee_cert || 'BEE-EM-2019-08847'
+  };
+  Object.entries(fields).forEach(([id, value]) => {
+    const el = document.getElementById(id);
+    if (el) el.value = value;
+  });
+}
+
+async function loadRuntimeConfig() {
+  const cfg = await api('/api/config');
+  if (!cfg || !cfg.success || !cfg.firebaseEnabled) {
+    DEMO_MODE = true;
+    showAuthMessage('Firebase config not detected. Google sign-in will use local demo mode.', 'info');
+    return;
+  }
+  firebaseConfig = cfg.firebaseConfig;
+  try {
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    auth = firebase.auth();
+    await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+    firebaseReady = true;
+    DEMO_MODE = false;
+    clearAuthMessage();
+  } catch (err) {
+    console.warn('Firebase init failed, falling back to demo mode:', err);
+    firebaseReady = false;
+    auth = null;
+    DEMO_MODE = true;
+    showAuthMessage('Firebase could not initialize. Falling back to local mode.', 'error');
+  }
+}
+
+async function bootstrapApp() {
+  await loadRuntimeConfig();
+
+  const backendSession = await api('/api/auth/session');
+  if (backendSession && backendSession.success && backendSession.authenticated) {
+    currentUser = backendSession.user;
+    if (backendSession.has_profile && backendSession.profile) {
+      profileData = {
+        user_uid: backendSession.profile.user_uid,
+        company_name: backendSession.profile.company_name || '',
+        owner_name: backendSession.profile.owner_name || '',
+        gstin: backendSession.profile.gstin || '',
+        mobile: backendSession.profile.mobile || '',
+        sector: backendSession.profile.sector || '',
+        address: backendSession.profile.address || '',
+        bee_cert: backendSession.profile.bee_cert || '',
+        energy_manager: backendSession.profile.energy_manager || '',
+        digilocker_verified: !!backendSession.profile.digilocker_verified
+      };
+      saveSession();
+      enterPlatform();
+      return;
+    }
+    fillProfileForm(backendSession.user || {});
+    saveSession();
+    showAuthSection('auth-profile');
+    return;
+  }
+
+  if (firebaseReady && auth) {
+    try {
+      const redirectResult = await auth.getRedirectResult();
+      if (redirectResult && redirectResult.user) {
+        currentUser = {
+          uid: redirectResult.user.uid,
+          email: redirectResult.user.email,
+          displayName: redirectResult.user.displayName,
+          photoURL: redirectResult.user.photoURL
+        };
+        await postAuthFlow(currentUser);
+        return;
+      }
+    } catch (err) {
+      console.warn('Redirect sign-in result failed:', err);
+      toast('Google sign-in needs one more attempt. Please try again.');
+      showAuthMessage('Google redirect returned an error: ' + (err.message || err.code || 'Unknown error'), 'error');
+    }
+
+    auth.onAuthStateChanged(async (user) => {
+      if (!user) {
+        const storedFirebaseUser = getFirebaseStoredUser();
+        if (storedFirebaseUser) {
+          currentUser = storedFirebaseUser;
+          await postAuthFlow(currentUser);
+          return;
+        }
+        if (!restoreSession()) {
+          showAuthSection('auth-signin');
+        }
+        return;
+      }
+      currentUser = {
+        uid: user.uid,
+        email: user.email,
+        displayName: user.displayName,
+        photoURL: user.photoURL
+      };
+      await postAuthFlow(currentUser);
+    });
+  } else if (restoreSession()) {
+    enterPlatform();
+  } else {
+    const storedFirebaseUser = getFirebaseStoredUser();
+    if (storedFirebaseUser) {
+      currentUser = storedFirebaseUser;
+      await postAuthFlow(currentUser);
+    }
+  }
+}
+
+// ══════════════════════════════════
+// AUTH FLOW
+// ══════════════════════════════════
+function showAuthSection(id) {
+  document.querySelectorAll('.auth-section').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if (id !== 'auth-signin') clearAuthMessage();
+  // Update step dots
+  const stepMap = {'auth-signin':0,'auth-otp':0,'auth-profile':1,'auth-docs':2,'auth-success':2};
+  const step = stepMap[id] ?? 0;
+  document.querySelectorAll('.auth-step-dot').forEach((d,i) => {
+    d.classList.toggle('active', i === step);
+  });
+}
+
+// ── Google Sign In ──
+async function signInWithGoogle() {
+  clearAuthMessage();
+  if (DEMO_MODE) {
+    // Demo: skip Firebase, create a local demo user
+    showAuthMessage('Using local sign-in because Firebase auth is unavailable.', 'info');
+    currentUser = { uid:'demo_user_001', email:'demo@creditx.in', displayName:'Demo User', photoURL:'' };
+    await postAuthFlow(currentUser);
+    return;
+  }
+  try {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    provider.setCustomParameters({ prompt:'select_account' });
+    const result = await auth.signInWithPopup(provider);
+    const u = result.user;
+    currentUser = { uid:u.uid, email:u.email, displayName:u.displayName, photoURL:u.photoURL };
+    await postAuthFlow(currentUser);
+  } catch(err) {
+    console.error('Google sign-in failed:', err);
+    showAuthMessage('Google sign-in failed: ' + (err.message || err.code || 'Unknown error'), 'error');
+    const popupFallbackErrors = [
+      'auth/popup-blocked',
+      'auth/popup-closed-by-user',
+      'auth/cancelled-popup-request',
+      'auth/operation-not-supported-in-this-environment'
+    ];
+    if (popupFallbackErrors.includes(err.code)) {
+      try {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        provider.setCustomParameters({ prompt:'select_account' });
+        toast('Redirecting to Google sign-in...');
+        showAuthMessage('Popup blocked. Redirecting to Google sign-in...', 'info');
+        await auth.signInWithRedirect(provider);
+        return;
+      } catch (redirectErr) {
+        console.error('Google redirect sign-in failed:', redirectErr);
+        showAuthMessage('Google redirect failed: ' + (redirectErr.message || redirectErr.code || 'Unknown error'), 'error');
+        toast('❌ Google sign-in failed: ' + (redirectErr.message || redirectErr.code || 'Unknown error'));
+        return;
+      }
+    }
+    toast('❌ Google sign-in failed: ' + (err.message || err.code || 'Unknown error'));
+  }
+}
+
+async function postAuthFlow(user) {
+  clearAuthMessage();
+  // Save to backend
+  const data = await api('/api/auth/google','POST', user);
+  if (data && data.has_profile && data.profile) {
+    // Returning user — populate profileData from saved profile
+    profileData = {
+      user_uid:     data.profile.user_uid,
+      company_name: data.profile.company_name || '',
+      owner_name:   data.profile.owner_name   || '',
+      gstin:        data.profile.gstin        || '',
+      mobile:       data.profile.mobile       || '',
+      sector:       data.profile.sector       || '',
+      address:      data.profile.address      || '',
+      bee_cert:     data.profile.bee_cert     || '',
+      energy_manager:data.profile.energy_manager || '',
+      digilocker_verified: !!data.profile.digilocker_verified,
+    };
+    currentUser = { ...currentUser, ...(data.user || {}) };
+    saveSession();
+    enterPlatform();
+  } else if (data && !data.has_profile) {
+    // New user — go to profile setup
+    currentUser = { ...currentUser, ...(data.user || {}) };
+    fillProfileForm({ ...data.user, ...profileData });
+    saveSession();
+    showAuthSection('auth-profile');
+  } else {
+    // Backend down in demo — still go to profile step
+    fillProfileForm(currentUser || {});
+    saveSession();
+    showAuthMessage('Continuing in local mode. Fill your company profile to proceed.', 'info');
+    showAuthSection('auth-profile');
+  }
+}
+
+// ── OTP Flow ──
+async function sendOTP() {
+  const phone = document.getElementById('otp-phone').value.trim();
+  if (!/^[6-9]\d{9}$/.test(phone)) { toast('❌ Enter a valid 10-digit Indian mobile number'); return; }
+  otpPhone = '+91' + phone;
+  const data = await api('/api/auth/send-otp','POST',{phone: otpPhone});
+  if (data && data.success) {
+    document.getElementById('otp-sent-to').textContent = `OTP sent to ${otpPhone}`;
+    if (data.demo_otp) {
+      const hint = document.getElementById('demo-otp-hint');
+      hint.style.display = 'block';
+      hint.textContent = `Demo OTP (not sent via SMS): ${data.demo_otp}`;
+      demoOTP = data.demo_otp;
+    }
+    showAuthSection('auth-otp');
+    document.getElementById('otp0').focus();
+  }
+}
+
+function otpInput(i) {
+  const v = document.getElementById('otp'+i).value;
+  if (v && i < 5) document.getElementById('otp'+(i+1)).focus();
+}
+
+async function verifyOTP() {
+  const otp = [0,1,2,3,4,5].map(i => document.getElementById('otp'+i).value).join('');
+  if (otp.length !== 6) { toast('❌ Enter all 6 digits'); return; }
+  const data = await api('/api/auth/verify-otp','POST',{phone:otpPhone, otp});
+  if (data && data.success) {
+    currentUser = data.user;
+    fillProfileForm(currentUser);
+    saveSession();
+    showAuthSection('auth-profile');
+  } else {
+    toast('❌ '+(data ? data.error : 'Verification failed'));
+  }
+}
+
+// ── Profile Step 1 ──
+async function saveProfileStep1() {
+  const f = {
+    company_name: document.getElementById('p-company').value.trim(),
+    owner_name:   document.getElementById('p-owner').value.trim(),
+    gstin:        document.getElementById('p-gstin').value.trim().toUpperCase(),
+    mobile:       document.getElementById('p-mobile').value.trim(),
+    sector:       document.getElementById('p-sector').value,
+    address:      document.getElementById('p-address').value.trim(),
+  };
+  if (!f.company_name || !f.gstin || !f.sector) { toast('❌ Please fill all required fields (Company Name, GSTIN, Sector)'); return; }
+  if (f.gstin.length !== 15) { toast('❌ GSTIN must be exactly 15 characters'); return; }
+  // Ensure user_uid is always set — fallback to demo uid if auth not ready
+  profileData = { ...f, user_uid: currentUser?.uid || currentUser?.id || 'demo_user_001' };
+  saveSession();
+  showAuthSection('auth-docs');
+}
+
+// ── DigiLocker (simulated) ──
+async function verifyWithDigilocker() {
+  const gstin = profileData.gstin || document.getElementById('p-gstin')?.value?.trim()?.toUpperCase() || '';
+  if (!gstin || gstin.length !== 15) { toast('❌ Complete company info first'); showAuthSection('auth-profile'); return; }
+  const btn = document.querySelector('.digilocker-btn');
+  btn.textContent = '⏳ Connecting to DigiLocker...';
+  btn.disabled = true;
+  await new Promise(r => setTimeout(r, 1800)); // simulate API call
+  const data = await api('/api/profile/digilocker-verify','POST',{ user_uid: profileData.user_uid || 'demo_user_001', gstin });
+  btn.disabled = false;
+  btn.innerHTML = '🇮🇳 Verify via DigiLocker (Recommended)';
+  const el = document.getElementById('digilocker-status');
+  el.style.display = 'block';
+  if (data && data.success) {
+    el.innerHTML = '<div class="verified-badge" style="width:100%;justify-content:center;">✅ DigiLocker Verified Successfully</div>';
+    profileData.digilocker_verified = true;
+    saveSession();
+  } else {
+    el.innerHTML = '<div class="alert alert-gold" style="margin:0;">⚠️ DigiLocker verification failed. Please upload documents manually below.</div>';
+  }
+}
+
+function fileUploaded(zoneId, lblId, input) {
+  const file = input.files[0];
+  if (!file) return;
+  document.getElementById(zoneId).classList.add('uploaded');
+  document.getElementById(lblId).textContent = '✅ ' + file.name;
+}
+
+// ── Complete Registration ──
+async function completeProfile() {
+  // Validate: need DigiLocker OR at least one uploaded doc
+  const gstFile = document.getElementById('file-gst').files[0];
+  const panFile = document.getElementById('file-pan').files[0];
+  const regFile = document.getElementById('file-reg').files[0];
+  const digiOk  = profileData.digilocker_verified;
+
+  if (!digiOk && !gstFile && !panFile && !regFile) {
+    toast('❌ Please verify via DigiLocker or upload at least one document');
+    return;
+  }
+
+  const btn = document.getElementById('complete-profile-btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Saving...';
+
+  let data = null;
+  try {
+    // Build multipart FormData so we can attach the actual files
+    const fd = new FormData();
+    Object.entries(profileData).forEach(([k,v]) => fd.append(k, v ?? ''));
+    if (gstFile) fd.append('gst_doc', gstFile);
+    if (panFile) fd.append('pan_doc', panFile);
+    if (regFile) fd.append('reg_doc', regFile);
+
+    const res = await fetch('/api/profile/save', { method: 'POST', body: fd });
+    data = await res.json();
+  } catch(err) {
+    console.error('completeProfile error:', err);
+  }
+
+  btn.disabled = false;
+  btn.textContent = '✅ Complete Registration';
+
+  if (data && data.success) {
+    if (data.docs_saved && data.docs_saved.length > 0)
+      toast('📎 Documents uploaded: ' + data.docs_saved.join(', '));
+    profileData.profile_status = data.status || 'pending';
+    saveSession();
+    showAuthSection('auth-success');
+  } else if (!data) {
+    // Backend unreachable — let user proceed in demo mode
+    toast('⚠️ Backend unreachable. Proceeding in demo mode.');
+    saveSession();
+    showAuthSection('auth-success');
+  } else {
+    toast('❌ ' + (data.error || 'Failed to save profile. Please try again.'));
+  }
+}
+
+function enterPlatform() {
+  document.getElementById('auth-screen').style.display = 'none';
+
+  // Resolve display name — Firebase uses displayName, DB rows use display_name
+  const name    = currentUser?.displayName || currentUser?.display_name
+                  || profileData?.owner_name || 'User';
+  const company = profileData?.company_name || currentUser?.company_name || 'My Company';
+  const sector  = profileData?.sector       || currentUser?.sector       || 'Verified';
+  const email   = currentUser?.email        || '';
+
+  // Update sidebar
+  document.getElementById('sidebar-user-name').textContent = name;
+  document.getElementById('sidebar-user-status').textContent = '● ' + sector;
+  document.getElementById('topbar-company').textContent = '🏭 ' + company;
+
+  // Update user avatar initials if element exists
+  const avatarEl = document.getElementById('sidebar-avatar');
+  if (avatarEl) {
+    const initials = name.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+    avatarEl.textContent = initials || '👤';
+  }
+
+  fillProfileForm(profileData);
+  hydrateReportForm();
+  saveSession();
+
+  // Show calculator page by default
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  const defPage = document.getElementById('page-calculator');
+  if (defPage) defPage.classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const firstNav = document.querySelector('.nav-item');
+  if (firstNav) firstNav.classList.add('active');
+  document.getElementById('topbar-title').textContent = 'Emission Calculator';
+
+  // Load live data
+  loadDashboard();
+  buildMarketplace();
+  buildBlockchain();
+}
+
+function signOut() {
+  if (auth && !DEMO_MODE) auth.signOut();
+  currentUser = null; profileData = {};
+  otpPhone = ''; demoOTP = '';
+  clearSession();
+  // Reset file inputs so uploads don't persist across sessions
+  ['file-gst','file-pan','file-reg'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  ['zone-gst','zone-pan','zone-reg'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.remove('uploaded');
+  });
+  ['lbl-gst','lbl-pan','lbl-reg'].forEach((id, i) => {
+    const el = document.getElementById(id);
+    const labels = ['Click to upload GST Certificate (PDF/JPG)',
+                    'Click to upload PAN Card (PDF/JPG)',
+                    'Click to upload (PDF/JPG)'];
+    if (el) el.textContent = labels[i];
+  });
+  document.getElementById('digilocker-status').style.display = 'none';
+  document.getElementById('auth-screen').style.display = 'flex';
+  showAuthSection('auth-signin');
+}
+
+// ══════════════════════════════════
+// NAVIGATION
+// ══════════════════════════════════
+function showPage(id, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const page = document.getElementById('page-'+id);
+  if (!page) {
+    toast('⚠️ This section is unavailable right now.');
+    return;
+  }
+  page.classList.add('active');
+  if (el) el.classList.add('active');
+  const titles = {calculator:'Emission Calculator',marketplace:'Carbon Marketplace',blockchain:'Blockchain Ledger',portfolio:'My Portfolio',guidelines:'Govt. Guidelines',report:'Report Generator',scope3:'Scope 3 Analyser',ai:'Operations Advisor',dashboard:'Dashboard & Insights'};
+  document.getElementById('topbar-title').textContent = titles[id] || id;
+  if (id==='marketplace') buildMarketplace();
+  if (id==='blockchain')  buildBlockchain();
+  if (id==='portfolio')   loadPortfolio();
+  if (id==='dashboard')   loadDashboard();
+  if (id==='report')      hydrateReportForm();
+}
+
+function switchTab(group, id, btn) {
+  btn.parentElement.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const parent = btn.closest('.page') || document;
+  parent.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function toast(msg) {
+  const t = document.getElementById('toast'); t.textContent = msg;
+  t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// ══════════════════════════════════
+// CALCULATOR
+// ══════════════════════════════════
+const presets = {
+  ssi:{e:3200,f:600,t:1800}, textile:{e:8500,f:1200,t:3000},
+  pharma:{e:12000,f:400,t:2000}, cold:{e:18000,f:200,t:500}, cement:{e:6000,f:3000,t:5000}
+};
+function fillPreset(k) {
+  const p=presets[k];
+  [['c-elec','s-elec'],['c-fuel','s-fuel'],['c-trans','s-trans']].forEach(([n,s],i)=>{
+    document.getElementById(n).value=[p.e,p.f,p.t][i];
+    syncS(n,s,0,i===1?5000:20000);
+  });
+}
+function syncS(id,sid,min,max){const v=parseFloat(document.getElementById(id).value)||0;const s=document.getElementById(sid);s.value=Math.min(v,max);updateTrack(s,min,max);}
+function syncN(id,v,sid,min,max){document.getElementById(id).value=v;updateTrack(document.getElementById(sid),min,max);}
+function updateTrack(s,min,max){const pct=((s.value-min)/(max-min))*100;s.style.background=`linear-gradient(to right,var(--forest2) ${pct}%,var(--border) ${pct}%)`;}
+function r(n,d=0){return Math.round(n*Math.pow(10,d))/Math.pow(10,d);}
+
+let lastCalcResult=null, lastCalcInput=null;
+async function calculate() {
+  const e=parseFloat(document.getElementById('c-elec').value)||0;
+  const f=parseFloat(document.getElementById('c-fuel').value)||0;
+  const t=parseFloat(document.getElementById('c-trans').value)||0;
+  const p=parseFloat(document.getElementById('c-prod').value)||1;
+  const fe=parseFloat(document.getElementById('f-elec').value)||0.82;
+  const ff=parseFloat(document.getElementById('f-fuel').value)||2.31;
+  const ft=parseFloat(document.getElementById('f-trans').value)||0.12;
+  const btn=document.querySelector('[onclick="calculate()"]');
+  if(btn){btn.textContent='⏳ Calculating...';btn.disabled=true;}
+  const data=await api('/api/calculate','POST',{electricity:e,fuel:f,transport:t,ef_electricity:fe,ef_fuel:ff,ef_transport:ft,production:p});
+  if(btn){btn.textContent='⚡ Calculate Emissions & Credits';btn.disabled=false;}
+  if(!data)return;
+  lastCalcResult=data; lastCalcInput={electricity:e,fuel:f,transport:t,production:p};
+  document.getElementById('r-co2').textContent=r(data.co2_total)+' kg';
+  document.getElementById('r-credits').textContent=r(data.credits,3);
+  document.getElementById('r-value').textContent='₹'+r(data.credit_value);
+  document.getElementById('global-score').textContent='Score: '+data.green_score+'/100';
+  document.getElementById('b-elec').textContent=r(data.co2_electricity)+' kg';
+  document.getElementById('b-fuel').textContent=r(data.co2_fuel)+' kg';
+  document.getElementById('b-trans').textContent=r(data.co2_transport)+' kg';
+  setTimeout(()=>{
+    document.getElementById('pb-elec').style.width=data.pct_elec+'%';
+    document.getElementById('pb-fuel').style.width=data.pct_fuel+'%';
+    document.getElementById('pb-trans').style.width=data.pct_trans+'%';
+  },100);
+  const tip=data.tip||{};
+  document.getElementById('ai-icon').textContent=tip.icon||'💡';
+  document.getElementById('ai-title').textContent=tip.title||'Analysis';
+  document.getElementById('ai-text').textContent=tip.text||'';
+  document.getElementById('bee-status').innerHTML=data.bee_status+'<br><br>Annual CO₂: <strong>'+data.annual.co2+' tonnes</strong> · Credits: <strong>'+data.annual.credits+'</strong> · Value: <strong>₹'+r(data.annual.value)+'</strong>';
+  document.getElementById('calc-empty').style.display='none';
+  document.getElementById('calc-results').style.display='block';
+}
+
+async function saveToPortfolio() {
+  if(!lastCalcResult){toast('⚠️ Run the calculator first!');return;}
+  const btn=document.querySelector('[onclick="saveToPortfolio()"]');
+  if(btn){btn.textContent='⏳ Minting...';btn.disabled=true;}
+  const data=await api('/api/save-emission','POST',{...lastCalcInput,result:lastCalcResult,period:'FY 2024-25'});
+  if(btn){btn.textContent='🪙 Mint Credits to Blockchain';btn.disabled=false;}
+  if(data&&data.success) toast(`🪙 Minted! Token: ${data.token_id} · Block: #${data.block}`);
+}
+
+// ══════════════════════════════════
+// MARKETPLACE
+// ══════════════════════════════════
+let modalPrice=800, modalTokenId='';
+async function buildMarketplace() {
+  const grid=document.getElementById('market-grid');
+  grid.innerHTML='<div style="text-align:center;padding:40px;color:var(--muted);">⏳ Loading marketplace...</div>';
+  const companies=await api('/api/marketplace');
+  if(!companies)return;
+  grid.innerHTML=companies.map(c=>`
+    <div class="market-card">
+      <div class="market-card-header">
+        <div class="company-avatar" style="background:${c.color}">${c.icon}</div>
+        <div><div class="company-name">${c.name}</div><div class="company-sector">${c.sector} · Score: ${c.score}</div></div>
+        ${c.verified?'<span class="badge badge-green" style="margin-left:auto;font-size:.65rem;">✅ Verified</span>':'<span class="badge badge-gold" style="margin-left:auto;font-size:.65rem;">⏳ Pending</span>'}
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div class="market-price">₹${c.price}<span>/credit</span></div>
+        <div class="credit-chips"><span class="credit-chip">🪙 ${c.credits} avail.</span></div>
+      </div>
+      <div style="font-size:.78rem;color:var(--muted);">Blockchain-verified · Tradeable on IEX</div>
+      <button class="btn btn-primary btn-full" onclick="openBuy('${c.token_id}','${c.name}','${c.sector}',${c.price})" style="padding:9px;">Buy Credits</button>
+    </div>`).join('');
+}
+
+function openBuy(tokenId,name,sector,price){
+  modalPrice=price; modalTokenId=tokenId;
+  document.getElementById('modal-company').textContent='Buy from '+name;
+  document.getElementById('modal-sub').textContent=sector;
+  document.getElementById('modal-price').textContent='₹'+price;
+  updateModal(); document.getElementById('buy-modal').style.display='flex';
+}
+function updateModal(){const q=parseFloat(document.getElementById('modal-qty').value)||1;const t=q*modalPrice;document.getElementById('modal-total').textContent='₹'+Math.round(t);document.getElementById('modal-fee').textContent='₹'+Math.round(t*.01);}
+document.getElementById('modal-qty').addEventListener('input',updateModal);
+function closeModal(){document.getElementById('buy-modal').style.display='none';}
+async function confirmBuy(){
+  const qty=parseFloat(document.getElementById('modal-qty').value)||1; closeModal();
+  const data=await api('/api/buy','POST',{token_id:modalTokenId,qty,price:modalPrice,buyer:'Rajan Industries Pvt. Ltd.'});
+  if(data&&data.success) toast(`✅ Purchased! Tx: ${data.tx_hash} · ₹${data.total}`);
+  else toast('❌ Purchase failed.');
+}
+async function listCredits(){
+  const qty=parseFloat(document.getElementById('sell-qty').value)||1;
+  const price=parseFloat(document.getElementById('sell-price').value)||800;
+  const data=await api('/api/sell','POST',{qty,price});
+  if(data&&data.success) toast(`📤 Listed ${qty} credits at ₹${price}! Token: ${data.token_id}`);
+}
+
+// ══════════════════════════════════
+// BLOCKCHAIN
+// ══════════════════════════════════
+async function buildBlockchain(){
+  const el=document.getElementById('blockchain-txs');
+  el.innerHTML='<div style="text-align:center;padding:30px;color:var(--muted);">⏳ Loading ledger...</div>';
+  const [txs,stats]=await Promise.all([api('/api/blockchain/transactions'),api('/api/blockchain/stats')]);
+  if(stats){
+    const sb=document.getElementById('bc-stats-bar');
+    if(sb) sb.innerHTML=`Block <strong>#${stats.latest_block}</strong> · Credits: <strong>${stats.total_credits}</strong> · ${stats.verification_rate}% verified`;
+    const bb=document.getElementById('bc-block');const bt=document.getElementById('bc-total');
+    if(bb) bb.textContent=stats.latest_block.toLocaleString('en-IN');
+    if(bt) bt.textContent=stats.total_credits;
+  }
+  if(!txs)return;
+  const colors={MINT:'badge-green',BUY:'badge-slate',SELL:'badge-gold',BURN:'badge-red',TRADE:'badge-slate'};
+  el.innerHTML=txs.map(t=>`<div class="tx-row"><span class="badge ${colors[t.type]||'badge-slate'}">${t.type}</span><span class="tx-hash">${t.hash}</span><span style="flex:1;font-size:.82rem;color:var(--muted);">${t.co}</span><span class="tx-amount">${t.amount}</span><span class="badge badge-slate" style="font-size:.68rem;">${t.time}</span></div>`).join('');
+}
+
+async function verifyCredit(){
+  const v=document.getElementById('verify-input').value.trim();
+  const el=document.getElementById('verify-result');
+  if(!v){el.innerHTML='<span style="color:var(--red);">Enter a token ID or hash.</span>';return;}
+  el.innerHTML='<span style="color:var(--muted);">⏳ Verifying on chain...</span>';
+  const data=await api('/api/blockchain/verify','POST',{token:v});
+  if(!data)return;
+  if(data.found) el.innerHTML=`<div class="alert alert-green">✅ <div><strong>Credit Verified on Blockchain</strong><br>Token: ${data.token_id} · Status: <strong>${data.status}</strong> · Owner: ${data.owner}<br>Issued by: ${data.issued_by} · Amount: <strong>${data.amount} credits</strong></div></div>`;
+  else el.innerHTML=`<div class="alert" style="background:#fef2f0;border-color:#f5c6bb;">❌ <div>${data.message}</div></div>`;
+}
+
+// ══════════════════════════════════
+// PORTFOLIO
+// ══════════════════════════════════
+async function loadPortfolio(){
+  const data=await api('/api/portfolio/1');
+  if(!data)return;
+  const el=document.getElementById('portfolio-holdings');
+  if(el){
+    el.innerHTML=data.holdings.length===0
+      ?'<p style="color:var(--muted);text-align:center;padding:20px;">No holdings yet. Calculate &amp; mint credits first.</p>'
+      :data.holdings.map(h=>`<div class="tx-row"><span class="badge badge-green">🪙</span><span class="tx-hash">${h.token_id}</span><span style="flex:1;font-size:.82rem;color:var(--muted);">${h.source}</span><span class="tx-amount">${h.amount} credits</span><span class="badge badge-slate">₹${h.current_price}/cr</span><button class="btn btn-gold" style="padding:5px 10px;font-size:.72rem;" onclick="toast('Listed for sale!')">Sell</button></div>`).join('');
+  }
+  const tc=document.getElementById('port-total-credits');const tv=document.getElementById('port-total-value');
+  if(tc) tc.textContent=data.total_credits;
+  if(tv) tv.textContent='₹'+data.total_value.toLocaleString('en-IN');
+}
+
+// ══════════════════════════════════
+// DASHBOARD
+// ══════════════════════════════════
+async function loadDashboard(){
+  const data=await api('/api/dashboard/stats');
+  if(!data)return;
+  const map={'dash-co2':data.co2+' kg','dash-credits':data.credits,'dash-value':'₹'+Number(data.value).toLocaleString('en-IN')};
+  Object.entries(map).forEach(([id,val])=>{const el=document.getElementById(id);if(el)el.textContent=val;});
+}
+
+// ══════════════════════════════════
+// SCOPE 3
+// ══════════════════════════════════
+async function calcScope3(){
+  const data=await api('/api/scope3/calculate','POST',{
+    purchased_goods:parseFloat(document.getElementById('s3-goods').value)||0,
+    upstream_transport:parseFloat(document.getElementById('s3-uptrans').value)||0,
+    capital_goods:parseFloat(document.getElementById('s3-capital').value)||0,
+    downstream_transport:parseFloat(document.getElementById('s3-dntrans').value)||0,
+    end_of_life:parseFloat(document.getElementById('s3-eol').value)||0,
+    customer_use:parseFloat(document.getElementById('s3-use').value)||0,
+    leased_assets:0
+  });
+  if(!data)return;
+  const el=document.getElementById('scope3-result');
+  el.style.display='block';
+  el.innerHTML=`✅ <div><strong>Scope 3 Total: ${data.total} kg CO₂</strong><br>Upstream: ${data.upstream} kg · Downstream: ${data.downstream} kg · Credits potential: <strong>${data.credits}</strong></div>`;
+  toast(`🔍 Scope 3: ${data.total} kg CO₂ · ${data.credits} credits`);
+}
+
+// ══════════════════════════════════
+// REPORT GENERATOR
+// ══════════════════════════════════
+async function generateReport(){
+  const co=document.getElementById('rep-company').value,gstin=document.getElementById('rep-gstin').value,addr=document.getElementById('rep-address').value,sec=document.getElementById('rep-sector').value,per=document.getElementById('rep-period').value;
+  const elec=parseFloat(document.getElementById('rep-elec').value)||0,fuel=parseFloat(document.getElementById('rep-fuel').value)||0,trans=parseFloat(document.getElementById('rep-trans').value)||0,prod=parseFloat(document.getElementById('rep-prod').value)||1;
+  const mgr=document.getElementById('rep-mgr').value,cert=document.getElementById('rep-cert').value;
+  const btn=document.querySelector('[onclick="generateReport()"]');
+  if(btn){btn.textContent='⏳ Generating...';btn.disabled=true;}
+  const data=await api('/api/report/generate','POST',{electricity:elec,fuel,transport:trans,production:prod,period:per});
+  if(btn){btn.textContent='📄 Generate Report';btn.disabled=false;}
+  if(!data)return;
+  document.getElementById('report-content').innerHTML=`
+    <div class="report-preview">
+      <div class="report-header"><div class="report-emblem">🇮🇳</div><div style="font-size:.8rem;color:var(--slate);font-weight:700;letter-spacing:.06em;margin-top:4px;">GOVERNMENT OF INDIA · MINISTRY OF POWER</div><div class="report-title">ANNUAL PERFORMANCE REPORT (APR)</div><div class="report-subtitle">Bureau of Energy Efficiency · Energy Conservation Act 2001<br>Carbon Credit Trading Scheme (CCTS) 2023</div></div>
+      <div class="report-section-title">Section A — Company Identification</div>
+      <table class="report-table"><tr><th>Industry Name</th><td colspan="3">${co}</td></tr><tr><th>GSTIN</th><td>${gstin}</td><th>Sector</th><td>${sec}</td></tr><tr><th>Period</th><td>${per}</td><th>Report Date</th><td>${data.today}</td></tr><tr><th>Address</th><td colspan="3">${addr}</td></tr><tr><th>Energy Manager</th><td>${mgr}</td><th>BEE Cert.</th><td>${cert}</td></tr></table>
+      <div class="report-section-title">Section B — Energy Consumption</div>
+      <table class="report-table"><tr><th>Source</th><th>Consumption</th><th>Factor</th><th>CO₂ (kg)</th></tr><tr><td>Electricity</td><td>${elec.toLocaleString('en-IN')} kWh</td><td>0.82</td><td><strong>${Math.round(data.co2_e).toLocaleString('en-IN')}</strong></td></tr><tr><td>Fuel</td><td>${fuel.toLocaleString('en-IN')} L</td><td>2.31</td><td><strong>${Math.round(data.co2_f).toLocaleString('en-IN')}</strong></td></tr><tr><td>Transport</td><td>${trans.toLocaleString('en-IN')} km</td><td>0.12</td><td><strong>${Math.round(data.co2_t).toLocaleString('en-IN')}</strong></td></tr><tr style="background:#eef5fa;font-weight:700;"><td colspan="3">TOTAL CO₂</td><td>${Math.round(data.co2_total).toLocaleString('en-IN')} kg (${data.co2_total_tonnes} t)</td></tr></table>
+      <div class="report-section-title">Section C — Carbon Credits</div>
+      <table class="report-table"><tr><th>Parameter</th><th>Value</th><th>Notes</th></tr><tr><td>Total CO₂</td><td>${data.co2_total_tonnes} tonnes</td><td>Scope 1+2</td></tr><tr><td>Baseline</td><td>${data.baseline} tonnes</td><td>BEE Sector Avg ${per}</td></tr><tr><td>Reduction</td><td>${data.reduction} tonnes CO₂e</td><td>Below baseline</td></tr><tr><td>Credits Earned</td><td><strong>${data.credits}</strong></td><td>1 CCC = 1t CO₂e</td></tr><tr><td>Market Value</td><td>₹${data.credit_value.toLocaleString('en-IN')}</td><td>@ ₹800/credit</td></tr></table>
+      <div class="report-signature"><div><div class="sig-line"></div><div style="font-weight:700;font-size:.85rem;">${mgr}</div><div class="sig-label">Energy Manager (BEE)<br>Cert.: ${cert}</div></div><div><div class="sig-line"></div><div style="font-weight:700;font-size:.85rem;">Authorised Signatory</div><div class="sig-label">${co}<br>Date: ${data.today}</div></div></div>
+      <div style="text-align:center;margin-top:20px;font-size:.7rem;color:#999;border-top:1px solid #ddd;padding-top:12px;">Generated by CreditX · Ref: ${data.ref}</div>
+    </div>`;
+  toast('📄 Report generated! Ref: '+data.ref);
+}
+
+function printReport(){
+  const content=document.getElementById('report-content').innerHTML;
+  const win=window.open('','_blank');
+  win.document.write(`<!DOCTYPE html><html><head><title>CreditX APR</title><link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet"><style>body{font-family:'Nunito',sans-serif;background:#fff;}table{width:100%;border-collapse:collapse;font-size:.8rem;}th{background:#eef5fa;padding:8px 12px;border:1px solid #b8d4e3;}td{padding:8px 12px;border:1px solid #c8d8c9;}.sig-line{border-bottom:1px solid #333;padding-bottom:20px;margin-bottom:6px;}.report-signature{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:32px;padding-top:20px;}@media print{body{-webkit-print-color-adjust:exact;}}</style></head><body>${content}<script>window.print();<\/script></body></html>`);
+  win.document.close();
+}
+
+window.addEventListener('error', (event) => {
+  console.error('Unhandled page error:', event.error || event.message);
+  showAuthMessage('Page error: ' + (event.message || 'Unknown browser error'), 'error');
+});
+
+bootstrapApp();
+
+// ══════════════════════════════════
+// CHARTS
+// ══════════════════════════════════
+new Chart(document.getElementById('trendChart'),{type:'line',data:{labels:['Nov','Dec','Jan','Feb','Mar','Apr'],datasets:[{label:'CO₂ (kg)',data:[1580,1490,1420,1380,1310,1248],borderColor:'#2d6a4f',backgroundColor:'rgba(45,106,79,.08)',fill:true,tension:.4,pointBackgroundColor:'#2d6a4f',pointRadius:5}]},options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:false,grid:{color:'rgba(0,0,0,.05)'}},x:{grid:{display:false}}},responsive:true}});
+new Chart(document.getElementById('pieChart'),{type:'doughnut',data:{labels:['Electricity','Fuel','Transport'],datasets:[{data:[492,578,178],backgroundColor:['#d4a017','#c1440e','#2e6f95'],borderColor:'#fff',borderWidth:3}]},options:{plugins:{legend:{position:'bottom'}},cutout:'65%',responsive:true}});
+new Chart(document.getElementById('portfolioChart'),{type:'bar',data:{labels:['Oct','Nov','Dec','Jan','Feb','Mar','Apr'],datasets:[{label:'Emissions (kg)',data:[1720,1580,1490,1420,1380,1310,1248],backgroundColor:'rgba(193,68,14,.5)',borderColor:'#c1440e',borderWidth:1},{label:'Credits',data:[1.72,1.58,1.49,1.42,1.38,1.31,1.248],backgroundColor:'rgba(45,106,79,.6)',borderColor:'#2d6a4f',borderWidth:1,yAxisID:'y2'}]},options:{plugins:{legend:{position:'bottom'}},scales:{y:{grid:{color:'rgba(0,0,0,.05)'},title:{display:true,text:'kg CO₂'}},y2:{position:'right',grid:{display:false},title:{display:true,text:'Credits'}}},responsive:true}});
+new Chart(document.getElementById('projectionChart'),{type:'line',data:{labels:['Now','Mo 1','Mo 2','Mo 3','Mo 4','Mo 5','Mo 6'],datasets:[{label:'Without Actions',data:[1248,1240,1235,1230,1225,1220,1215],borderColor:'#c1440e',borderDash:[5,5],tension:.3,fill:false},{label:'With AI Actions',data:[1248,1180,1100,1020,960,900,850],borderColor:'#2d6a4f',backgroundColor:'rgba(45,106,79,.08)',fill:true,tension:.4}]},options:{plugins:{legend:{position:'bottom'}},scales:{y:{title:{display:true,text:'kg CO₂/month'}},x:{grid:{display:false}}},responsive:true}});
+</script>
+</body>
+</html>
