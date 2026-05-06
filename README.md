@@ -37,13 +37,21 @@ CreditX helps a business user:
 
 ## Screenshots
 
-Add screenshots to a `docs/` folder and reference them here.
+### Login Page
+![Login](docs/login.png)
 
-```md
-![Sign in](docs/signin.png)
+### Dashboard
 ![Dashboard](docs/dashboard.png)
+
+### Emission Calculator
+![Emission Calculator](docs/emission-calculator.png)
+
+### Analytics
+![Analytics](docs/analytics.png)
+
+### Marketplace
 ![Marketplace](docs/marketplace.png)
-```
+
 
 ## Tech Stack
 
