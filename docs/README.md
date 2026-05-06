@@ -4,6 +4,8 @@ Add project screenshots in this folder and reference them from the main `README.
 
 Suggested files:
 
-- `signin.png`
-- `dashboard.png`
-- `marketplace.png`
+- login.png
+- emission-calculator.png
+- marketplace.png
+- dashboard.png
+- analytics.png
