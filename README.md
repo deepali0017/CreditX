@@ -1,6 +1,11 @@
 # CreditX
 
-CreditX is a people-centered AI- powered carbon intelligence platform helping Indian MSMEs turn scattered bills and fuel records into traceable emission insights, compliance readiness, and future carbon credit participation built with Flask, Firebase Authentication, SQLite, and a single-page frontend.
+CreditX is a people-centered AI-powered carbon intelligence platform helping Indian MSMEs turn scattered bills and fuel records into traceable emission insights, compliance readiness, and future carbon credit participation, built with Flask, Firebase Authentication, SQLite, and a single-page frontend.
+
+## Live Demo
+
+- Production app: [https://creditx-project-fixed.vercel.app](https://creditx-project-fixed.vercel.app)
+- Hosted demo note: this deployment is intended for product demonstration and portfolio sharing
 
 
 ## Problem
@@ -17,6 +22,15 @@ CreditX helps a business user:
 - complete a company profile and upload verification documents
 - calculate emissions and estimated carbon credits
 - review marketplace, portfolio, blockchain-style ledger, and reports
+
+## Deployment Status
+
+CreditX is deployed on Vercel as a working demo:
+
+- Frontend served through Flask
+- `/api/*` routed through the Vercel Python runtime
+- Firebase Google Authentication enabled
+- Local-style OTP demo flow retained for showcase purposes
 
 ## Demo Flow
 
@@ -60,6 +74,7 @@ CreditX helps a business user:
 - Auth: Firebase Authentication
 - Database: SQLite
 - File security: encrypted local document storage
+- Demo hosting target: Vercel Python runtime
 
 ## Quick Start
 
@@ -84,6 +99,87 @@ set +a
 python3 app.py
 ```
 
+## Vercel Deployment
+
+CreditX can be deployed to Vercel as a working demo with the current Flask app. The deployment keeps the app structure intact and serves both the frontend and `/api/*` routes through `app.py`.
+
+Current live deployment:
+
+- [https://creditx-project-fixed.vercel.app](https://creditx-project-fixed.vercel.app)
+
+### 1. Install the Vercel CLI
+
+```bash
+npm install -g vercel
+```
+
+### 2. Set project environment variables in Vercel
+
+In the Vercel dashboard for the project, add these environment variables:
+
+- `FIREBASE_API_KEY`
+- `FIREBASE_AUTH_DOMAIN`
+- `FIREBASE_PROJECT_ID`
+- `FIREBASE_APP_ID`
+- `FLASK_SECRET_KEY`
+- `FERNET_KEY`
+
+Optional Firebase values if you want the full config object populated:
+
+- `FIREBASE_STORAGE_BUCKET`
+- `FIREBASE_MESSAGING_SENDER_ID`
+
+Notes:
+
+- `FLASK_SECRET_KEY` should be a long random string.
+- `FERNET_KEY` must be a valid Fernet key and is required in production.
+- If `FERNET_KEY` is missing on Vercel, the app returns a clear configuration error instead of generating a new key.
+
+### 3. Deploy
+
+Preview deployment:
+
+```bash
+vercel
+```
+
+Production deployment:
+
+```bash
+vercel --prod
+```
+
+### 4. How the Vercel deployment works
+
+- `app.py` exports the Flask `app` object for the Vercel Python runtime.
+- `vercel.json` routes both `/api/*` and frontend requests to Flask.
+- Flask serves `static/index.html` for `/` and SPA-style frontend routes.
+- Runtime-writable demo files use `/tmp` on Vercel instead of the project folder.
+
+### 5. Important demo limitations on Vercel
+
+- SQLite is demo-only on Vercel because the filesystem is ephemeral.
+- Uploaded files are demo-only on Vercel because `/tmp` is not persistent.
+- Local document uploads and `creditx.db` can reset between deployments or cold starts.
+- The live site should be treated as a hosted demo, not durable production infrastructure.
+
+For a more reliable production-grade deployment, migrate:
+
+- SQLite → Postgres
+- local `uploads/` → durable object storage such as S3 / Vercel Blob / Firebase Storage
+
+### 6. Local development remains unchanged
+
+```bash
+python3 app.py
+```
+
+The app still uses:
+
+- local `creditx.db`
+- local `uploads/`
+- local `secrets/fernet.key` when `FERNET_KEY` is not provided
+
 ## Firebase Setup
 
 1. Create or open a Firebase project.
@@ -98,6 +194,7 @@ python3 app.py
 - uploaded documents are encrypted before being stored on disk
 - sensitive profile fields are encrypted before being stored in SQLite
 - encryption key is stored locally in `secrets/fernet.key` and excluded from Git
+- Vercel production should use `FERNET_KEY` from environment variables instead of generating keys at runtime
 
 This is strong server-side encryption at rest, not full end-to-end encryption.
 
@@ -110,6 +207,7 @@ Ignored from version control:
 - `creditx.db`
 - `uploads/`
 - `secrets/`
+- `.vercel/`
 
 ## Project Files
 
