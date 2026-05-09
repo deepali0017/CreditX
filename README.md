@@ -1,6 +1,6 @@
 # CreditX
 
-AI-powered carbon intelligence platform for Indian MSMEs  built with Flask, Firebase Authentication, SQLite, and a single-page frontend.
+CreditX is a people-centered AI- powered carbon intelligence platform helping Indian MSMEs turn scattered bills and fuel records into traceable emission insights, compliance readiness, and future carbon credit participation built with Flask, Firebase Authentication, SQLite, and a single-page frontend.
 
 
 ## Problem
