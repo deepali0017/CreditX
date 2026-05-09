@@ -5,7 +5,7 @@ CreditX is a people-centered AI-powered carbon intelligence platform helping Ind
 ## Live Demo
 
 - Production app: [https://creditx-project-fixed.vercel.app](https://creditx-project-fixed.vercel.app)
-- Hosted demo note: this deployment is intended for product demonstration and portfolio sharing
+- Hosted demo note: this deployment is intended for product demonstration.
 
 
 ## Problem
@@ -75,29 +75,6 @@ CreditX is deployed on Vercel as a working demo:
 - Database: SQLite
 - File security: encrypted local document storage
 - Demo hosting target: Vercel Python runtime
-
-## Quick Start
-
-```bash
-cd /Users/deepalisingh/Downloads/creditx_project_fixed
-cp firebase.local.env.example firebase.local.env
-bash start.sh
-```
-
-Open: [http://localhost:8080](http://localhost:8080)
-
-## Manual Run
-
-```bash
-cd /Users/deepalisingh/Downloads/creditx_project_fixed
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-set -a
-source firebase.local.env
-set +a
-python3 app.py
-```
 
 ## Vercel Deployment
 
